@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.zeromq.ZMQ;
 
-public class Handler {
+public class HttpHandler {
 
 	private static String formatRequestIds(final String... ids) {
 
@@ -32,7 +32,7 @@ public class Handler {
 
 	private final String sendSpec;
 
-	public Handler(final String sendSpec, final String recvSpec) {
+	public HttpHandler(final String sendSpec, final String recvSpec) {
 
 		this.running = new AtomicBoolean();
 
@@ -52,11 +52,11 @@ public class Handler {
 	/**
 	 * Retrieves the next Request, blocking.
 	 */
-	public Request recv() {
-		return Request.parse(Handler.this.requests.recv(0));
+	public HttpRequest recv() {
+		return HttpRequest.parse(HttpHandler.this.requests.recv(0));
 	}
 
-	public void send(final Response response, final Request... recipients) {
+	public void send(final HttpResponse response, final HttpRequest... recipients) {
 		// TODO
 
 	}
