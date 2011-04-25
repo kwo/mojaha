@@ -80,18 +80,33 @@ public class HttpResponse {
 		return this.statusMessage;
 	}
 
-	/**
-	 * Set date and content-length headers.
-	 */
-	public void setDateAndLengthHeaders() {
-
-		setDateHeader(H_DATE, System.currentTimeMillis());
-		setIntHeader(H_CONTENT_LENGTH, getContent().length);
-
+	public void setContentLength(final int size) {
+		setIntHeader(H_CONTENT_LENGTH, size);
 	}
 
 	public void setContentType(final String mimetype) {
 		setHeader(H_CONTENT_TYPE, mimetype);
+	}
+
+	public void setDate(final Object... times) {
+
+		if (times.length == 0) {
+			setDateHeader(H_DATE, System.currentTimeMillis());
+		} else if (times.length == 1) {
+
+			final Object o = times[0];
+			if (o instanceof Date) {
+				setDateHeader(H_DATE, (Date) o);
+			} else if (o instanceof Long) {
+				setDateHeader(H_DATE, (Long) o);
+			} else {
+				throw new IllegalArgumentException("Optional date parameter must be of type Date or Long.");
+			}
+
+		} else {
+			throw new IllegalArgumentException("Only one optional date parameter permitted.");
+		}
+
 	}
 
 	public void setDateHeader(final String name, final Date date) {

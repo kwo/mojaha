@@ -70,6 +70,8 @@ public class HttpHandler {
 	 */
 	public HttpRequest recv() {
 
+		// TODO
+
 		return null;
 
 		// return HttpRequest.parse(HttpHandler.this.requests.recv(0));
