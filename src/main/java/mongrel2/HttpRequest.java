@@ -6,12 +6,8 @@ import java.util.Map;
 
 public class HttpRequest {
 
-	public static final String ATTR_REQUEST_ID = "request id";
-	public static final String ATTR_SENDER_ADDR = "sender addr";
-
-	public static HttpRequest parse(final byte[] request) {
-		return null;
-	}
+	public static final String ATTR_REQUEST_ID = "request-id";
+	public static final String ATTR_SENDER_ADDR = "sender-addr";
 
 	private final Map<String, Object> attributes;
 
@@ -41,7 +37,7 @@ public class HttpRequest {
 	}
 
 	public void setRequestId(final String requestId) {
-		setAttribute(ATTR_SENDER_ADDR, requestId);
+		setAttribute(ATTR_REQUEST_ID, requestId);
 	}
 
 	public void setSenderAddr(final String senderAddr) {

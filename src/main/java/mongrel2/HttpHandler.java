@@ -69,7 +69,11 @@ public class HttpHandler {
 	 * Retrieves the next Request, blocking.
 	 */
 	public HttpRequest recv() {
-		return HttpRequest.parse(HttpHandler.this.requests.recv(0));
+
+		return null;
+
+		// return HttpRequest.parse(HttpHandler.this.requests.recv(0));
+
 	}
 
 	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {
