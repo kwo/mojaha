@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
@@ -33,6 +32,10 @@ public class HttpResponse {
 		this.df.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
 
+	public void addDateHeader(final String name, final long value) {
+		addHeader(name, this.df.format(value));
+	}
+
 	public void addHeader(final String name, final String value) {
 		if (!containsHeader(name)) {
 			setHeader(name, value);
@@ -46,12 +49,20 @@ public class HttpResponse {
 		}
 	}
 
+	public void addIntHeader(final String name, final int value) {
+		addHeader(name, Integer.toString(value));
+	}
+
 	public boolean containsHeader(final String name) {
 		return this.headers.containsKey(name);
 	}
 
 	public byte[] getContent() {
 		return this.content.toByteArray();
+	}
+
+	public String getContentType() {
+		return getHeader(H_CONTENT_TYPE);
 	}
 
 	public String getHeader(final String name) {
@@ -95,12 +106,10 @@ public class HttpResponse {
 		} else if (times.length == 1) {
 
 			final Object o = times[0];
-			if (o instanceof Date) {
-				setDateHeader(H_DATE, (Date) o);
-			} else if (o instanceof Long) {
+			if (o instanceof Long) {
 				setDateHeader(H_DATE, (Long) o);
 			} else {
-				throw new IllegalArgumentException("Optional date parameter must be of type Date or Long.");
+				throw new IllegalArgumentException("Optional date parameter must be of type Long.");
 			}
 
 		} else {
@@ -109,19 +118,11 @@ public class HttpResponse {
 
 	}
 
-	public void setDateHeader(final String name, final Date date) {
+	public void setDateHeader(final String name, final long date) {
 		setHeader(name, this.df.format(date));
 	}
 
-	public void setDateHeader(final String name, final long date) {
-		setDateHeader(name, new Date(date));
-	}
-
-	public void setExpires(final Date date) {
-		setDateHeader(H_EXPIRES, date);
-	}
-
-	public void setExpires(final int value, final TimeUnit unit, final Date... times) {
+	public void setExpires(final int value, final TimeUnit unit, final Long... times) {
 
 		long time = System.currentTimeMillis();
 
@@ -130,7 +131,7 @@ public class HttpResponse {
 			// ignore
 			break;
 		case 1:
-			time = times[0].getTime();
+			time = times[0];
 			break;
 		default:
 			throw new IllegalArgumentException("Only one optional date argument permitted.");
@@ -175,16 +176,17 @@ public class HttpResponse {
 		setHeader(name, Integer.toString(value));
 	}
 
-	public void setLastModified(final Date date) {
-		setDateHeader(H_LAST_MODIFIED, date);
-	}
-
 	public void setLastModified(final long date) {
 		setDateHeader(H_LAST_MODIFIED, date);
 	}
 
 	public void setStatus(final int statusCode) {
 		this.statusCode = statusCode;
+	}
+
+	public void setStatus(final int sc, final String sm) {
+		this.statusCode = sc;
+		this.statusMessage = sm;
 	}
 
 	public void setStatusMessage(final String statusMessage) {

@@ -3,8 +3,12 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.zeromq.ZMQ;
 
 public class HttpHandler {
@@ -12,6 +16,14 @@ public class HttpHandler {
 	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final String LINE_TERMINATOR = "\r\n";
 	private static final char SPACE_CHAR = ' ';
+
+	static int findNextDelimiter(final byte[] raw, final int last, final char delimiter) {
+		final int start = last + 1;
+		for (int i = start; i < raw.length; i++)
+			if (raw[i] == delimiter)
+				return i;
+		return -1;
+	}
 
 	static String formatNetString(final HttpRequest[] requests) {
 		final String[] requestIds = new String[requests.length];
@@ -41,14 +53,12 @@ public class HttpHandler {
 	private final ZMQ.Context context;
 	private final String recvSpec;
 	private final ZMQ.Socket requests;
-
 	private final ZMQ.Socket responses;
-
 	private final AtomicBoolean running;
 
 	private final String sendSpec;
 
-	public HttpHandler(final String sendSpec, final String recvSpec) {
+	public HttpHandler(final String recvSpec, final String sendSpec) {
 
 		this.running = new AtomicBoolean();
 
@@ -56,8 +66,8 @@ public class HttpHandler {
 		this.requests = this.context.socket(ZMQ.PULL);
 		this.responses = this.context.socket(ZMQ.PUB);
 
-		this.sendSpec = sendSpec;
 		this.recvSpec = recvSpec;
+		this.sendSpec = sendSpec;
 
 	}
 
@@ -72,9 +82,61 @@ public class HttpHandler {
 
 		// TODO
 
-		return null;
+		final byte[] raw = this.requests.recv(0);
 
-		// return HttpRequest.parse(HttpHandler.this.requests.recv(0));
+		try {
+			System.out.write(raw);
+			System.out.println();
+		} catch (final IOException e) {
+		}
+
+		final HttpRequest req = new HttpRequest();
+
+		int p0 = -1;
+		int p1 = -1;
+		int length = 0;
+
+		// sender addr
+		p1 = findNextDelimiter(raw, p0, ' ');
+		req.setSenderAddr(new String(raw, p0 + 1, p1 - p0 - 1));
+
+		// request-id
+		p0 = p1;
+		p1 = findNextDelimiter(raw, p0, ' ');
+		req.setRequestId(new String(raw, p0 + 1, p1 - p0 - 1));
+
+		// matching path
+		p0 = p1;
+		p1 = findNextDelimiter(raw, p0, ' ');
+		req.setServletPath(new String(raw, p0 + 1, p1 - p0 - 1));
+
+		p0 = p1;
+		p1 = findNextDelimiter(raw, p0, ':');
+		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
+		final String jsonHeaders = new String(raw, p1 + 1, length);
+		try {
+			final JSONObject headers = new JSONObject(jsonHeaders);
+			final Iterator<String> keys = headers.keys();
+			while (keys.hasNext()) {
+				final String key = keys.next();
+				final String value = headers.getString(key);
+
+				if (key.equalsIgnoreCase("method")) {
+
+				} else {
+					req.setHeader(key, value);
+				}
+
+			}
+		} catch (final JSONException e) {
+		}
+
+		p0 = p1 + length + 1;
+		p1 = findNextDelimiter(raw, p0, ':');
+		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
+		req.setContent(Arrays.copyOfRange(raw, p1 + 1, p1 + 1 + length));
+
+		return req;
 
 	}
 
@@ -133,8 +195,8 @@ public class HttpHandler {
 		if (running && !wasRunning) {
 
 			// start up
-			this.requests.connect(this.sendSpec);
-			this.responses.connect(this.recvSpec);
+			this.requests.connect(this.recvSpec);
+			this.responses.connect(this.sendSpec);
 
 		} else if (!running && wasRunning) {
 			// shutdown

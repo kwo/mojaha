@@ -2,13 +2,48 @@ package mongrel2;
 
 import java.io.OutputStream;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 public class HttpResponseTest {
+
+	@Test
+	public void testAddDateHeader() throws Exception {
+
+		final Calendar cal = Calendar.getInstance();
+		cal.clear();
+		cal.set(Calendar.YEAR, 2011);
+		cal.set(Calendar.MONTH, Calendar.APRIL);
+		cal.set(Calendar.DATE, 25);
+		cal.set(Calendar.HOUR_OF_DAY, 22);
+		cal.set(Calendar.MINUTE, 07);
+		cal.set(Calendar.SECOND, 30);
+		cal.set(Calendar.MILLISECOND, 0);
+
+		final HttpResponse rsp = new HttpResponse();
+		rsp.setDateHeader("n1", cal.getTimeInMillis());
+		rsp.addDateHeader("n1", cal.getTimeInMillis());
+
+		Assert.assertEquals(2, rsp.getHeaderValues("n1").length);
+		Assert.assertEquals("Mon, 25 Apr 2011 20:07:30 GMT", rsp.getHeaderValues("n1")[0]);
+		Assert.assertEquals("Mon, 25 Apr 2011 20:07:30 GMT", rsp.getHeaderValues("n1")[1]);
+
+	}
+
+	@Test
+	public void testAddIntHeader() throws Exception {
+
+		final HttpResponse rsp = new HttpResponse();
+		rsp.setIntHeader("n1", 1);
+		rsp.addIntHeader("n1", 2);
+
+		Assert.assertEquals(2, rsp.getHeaderValues("n1").length);
+		Assert.assertEquals("1", rsp.getHeaderValues("n1")[0]);
+		Assert.assertEquals("2", rsp.getHeaderValues("n1")[1]);
+
+	}
 
 	@Test
 	public void testContent() throws Exception {
@@ -30,7 +65,7 @@ public class HttpResponseTest {
 		Assert.assertTrue(rsp.containsHeader("Content-Length"));
 		Assert.assertEquals(msg.getBytes().length, Integer.parseInt(rsp.getHeader("Content-Length")));
 		Assert.assertTrue(rsp.containsHeader("Content-Type"));
-		Assert.assertEquals("text/plain", rsp.getHeader("Content-Type"));
+		Assert.assertEquals("text/plain", rsp.getContentType());
 
 	}
 
@@ -70,7 +105,7 @@ public class HttpResponseTest {
 		cal.set(Calendar.MILLISECOND, 0);
 
 		final HttpResponse rsp4 = new HttpResponse();
-		rsp4.setDate(cal.getTime());
+		rsp4.setDate(cal.getTime().getTime());
 		Assert.assertTrue(rsp4.containsHeader("Date"));
 		Assert.assertEquals("Mon, 25 Apr 2011 21:42:30 GMT", rsp4.getHeader("Date"));
 
@@ -98,15 +133,17 @@ public class HttpResponseTest {
 
 		final HttpResponse rsp = new HttpResponse();
 
-		rsp.setExpires(cal.getTime());
+		rsp.setExpires(cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
 		Assert.assertEquals("Mon, 25 Apr 2011 20:07:30 GMT", rsp.getHeader("Expires"));
 
-		cal.add(Calendar.MINUTE, 1);
-
-		rsp.setExpires(cal.getTime().getTime());
-		Assert.assertTrue(rsp.containsHeader("Expires"));
-		Assert.assertEquals("Mon, 25 Apr 2011 20:08:30 GMT", rsp.getHeader("Expires"));
+		exceptionOccurred = false;
+		try {
+			rsp.setExpires(0, TimeUnit.SECONDS, cal.getTime().getTime(), cal.getTime().getTime());
+		} catch (final IllegalArgumentException x) {
+			exceptionOccurred = true;
+		}
+		Assert.assertTrue(exceptionOccurred);
 
 		exceptionOccurred = false;
 		try {
@@ -116,30 +153,21 @@ public class HttpResponseTest {
 		}
 		Assert.assertTrue(exceptionOccurred);
 
-		exceptionOccurred = false;
-		try {
-			final Date d1 = new Date();
-			rsp.setExpires(0, TimeUnit.SECONDS, d1, d1, d1);
-		} catch (final IllegalArgumentException x) {
-			exceptionOccurred = true;
-		}
-		Assert.assertTrue(exceptionOccurred);
-
-		rsp.setExpires(10, TimeUnit.SECONDS, cal.getTime());
+		rsp.setExpires(10, TimeUnit.SECONDS, cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
-		Assert.assertEquals("Mon, 25 Apr 2011 20:08:40 GMT", rsp.getHeader("Expires"));
+		Assert.assertEquals("Mon, 25 Apr 2011 20:07:40 GMT", rsp.getHeader("Expires"));
 
-		rsp.setExpires(10, TimeUnit.MINUTES, cal.getTime());
+		rsp.setExpires(10, TimeUnit.MINUTES, cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
-		Assert.assertEquals("Mon, 25 Apr 2011 20:18:30 GMT", rsp.getHeader("Expires"));
+		Assert.assertEquals("Mon, 25 Apr 2011 20:17:30 GMT", rsp.getHeader("Expires"));
 
-		rsp.setExpires(10, TimeUnit.HOURS, cal.getTime());
+		rsp.setExpires(10, TimeUnit.HOURS, cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
-		Assert.assertEquals("Tue, 26 Apr 2011 06:08:30 GMT", rsp.getHeader("Expires"));
+		Assert.assertEquals("Tue, 26 Apr 2011 06:07:30 GMT", rsp.getHeader("Expires"));
 
-		rsp.setExpires(10, TimeUnit.DAYS, cal.getTime());
+		rsp.setExpires(10, TimeUnit.DAYS, cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
-		Assert.assertEquals("Thu, 05 May 2011 20:08:30 GMT", rsp.getHeader("Expires"));
+		Assert.assertEquals("Thu, 05 May 2011 20:07:30 GMT", rsp.getHeader("Expires"));
 
 	}
 
@@ -212,7 +240,7 @@ public class HttpResponseTest {
 
 		final HttpResponse rsp = new HttpResponse();
 
-		rsp.setLastModified(cal.getTime());
+		rsp.setLastModified(cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Last-Modified"));
 		Assert.assertEquals("Mon, 25 Apr 2011 19:46:30 GMT", rsp.getHeader("Last-Modified"));
 
@@ -234,6 +262,10 @@ public class HttpResponseTest {
 
 		Assert.assertEquals(200, rsp.getStatus());
 		Assert.assertEquals("OK", rsp.getStatusMessage());
+
+		rsp.setStatus(404, "Not Found");
+		Assert.assertEquals(404, rsp.getStatus());
+		Assert.assertEquals("Not Found", rsp.getStatusMessage());
 
 	}
 
