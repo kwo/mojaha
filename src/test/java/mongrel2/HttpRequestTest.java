@@ -1,7 +1,5 @@
 package mongrel2;
 
-import java.util.Enumeration;
-
 import junit.framework.Assert;
 
 import org.junit.Test;
@@ -22,11 +20,9 @@ public class HttpRequestTest {
 		Assert.assertEquals("a2", req.getAttribute("a1"));
 
 		int counter = 0;
-		@SuppressWarnings("rawtypes")
-		final Enumeration e = req.getAttributeNames();
-		while (e.hasMoreElements()) {
+		for (@SuppressWarnings("unused")
+		final String name : req.getAttributeNames()) {
 			counter++;
-			e.nextElement();
 		}
 		Assert.assertEquals(3, counter);
 
@@ -78,11 +74,9 @@ public class HttpRequestTest {
 		Assert.assertTrue(req.containsHeader("h3"));
 
 		int counter = 0;
-		@SuppressWarnings("rawtypes")
-		final Enumeration e = req.getHeaderNames();
-		while (e.hasMoreElements()) {
+		for (@SuppressWarnings("unused")
+		final String name : req.getHeaderNames()) {
 			counter++;
-			e.nextElement();
 		}
 		Assert.assertEquals(3, counter);
 

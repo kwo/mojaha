@@ -1,6 +1,5 @@
 package mongrel2;
 
-import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
@@ -52,9 +51,7 @@ public class HttpResponseTest {
 
 		final String msg = "test content";
 
-		final OutputStream out = rsp.getOutputStream();
-		out.write(msg.getBytes());
-		out.close();
+		rsp.setContent(msg.getBytes());
 
 		final String contents = new String(rsp.getContent());
 		Assert.assertEquals(msg, contents);
@@ -73,26 +70,8 @@ public class HttpResponseTest {
 	public void testDate() throws Exception {
 
 		final HttpResponse rsp1 = new HttpResponse();
-		rsp1.setDate();
+		rsp1.setTimestampHeader();
 		Assert.assertTrue(rsp1.containsHeader("Date"));
-
-		boolean rsp2Exception = false;
-		try {
-			final HttpResponse rsp2 = new HttpResponse();
-			rsp2.setDate(0L, 0L);
-		} catch (final IllegalArgumentException x) {
-			rsp2Exception = true;
-		}
-		Assert.assertTrue(rsp2Exception);
-
-		boolean rsp3Exception = false;
-		try {
-			final HttpResponse rsp3 = new HttpResponse();
-			rsp3.setDate(" ");
-		} catch (final IllegalArgumentException x) {
-			rsp3Exception = true;
-		}
-		Assert.assertTrue(rsp3Exception);
 
 		final Calendar cal = Calendar.getInstance();
 		cal.clear();
@@ -105,14 +84,10 @@ public class HttpResponseTest {
 		cal.set(Calendar.MILLISECOND, 0);
 
 		final HttpResponse rsp4 = new HttpResponse();
-		rsp4.setDate(cal.getTime().getTime());
+		rsp4.setTimestampHeader(cal.getTime().getTime());
 		Assert.assertTrue(rsp4.containsHeader("Date"));
 		Assert.assertEquals("Mon, 25 Apr 2011 21:42:30 GMT", rsp4.getHeader("Date"));
-
-		final HttpResponse rsp5 = new HttpResponse();
-		rsp5.setDate(cal.getTime().getTime());
-		Assert.assertTrue(rsp5.containsHeader("Date"));
-		Assert.assertEquals("Mon, 25 Apr 2011 21:42:30 GMT", rsp5.getHeader("Date"));
+		Assert.assertEquals(cal.getTimeInMillis(), rsp4.getDateHeader("Date"));
 
 	}
 
@@ -129,29 +104,11 @@ public class HttpResponseTest {
 		cal.set(Calendar.SECOND, 30);
 		cal.set(Calendar.MILLISECOND, 0);
 
-		boolean exceptionOccurred = false;
-
 		final HttpResponse rsp = new HttpResponse();
 
 		rsp.setExpires(cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
 		Assert.assertEquals("Mon, 25 Apr 2011 20:07:30 GMT", rsp.getHeader("Expires"));
-
-		exceptionOccurred = false;
-		try {
-			rsp.setExpires(0, TimeUnit.SECONDS, cal.getTime().getTime(), cal.getTime().getTime());
-		} catch (final IllegalArgumentException x) {
-			exceptionOccurred = true;
-		}
-		Assert.assertTrue(exceptionOccurred);
-
-		exceptionOccurred = false;
-		try {
-			rsp.setExpires(0, TimeUnit.MILLISECONDS);
-		} catch (final IllegalArgumentException x) {
-			exceptionOccurred = true;
-		}
-		Assert.assertTrue(exceptionOccurred);
 
 		rsp.setExpires(10, TimeUnit.SECONDS, cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
@@ -169,6 +126,12 @@ public class HttpResponseTest {
 		Assert.assertTrue(rsp.containsHeader("Expires"));
 		Assert.assertEquals("Thu, 05 May 2011 20:07:30 GMT", rsp.getHeader("Expires"));
 
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testExpiresMilliseconds() {
+		final HttpResponse rsp = new HttpResponse();
+		rsp.setExpires(0, TimeUnit.MILLISECONDS);
 	}
 
 	@Test
@@ -257,8 +220,7 @@ public class HttpResponseTest {
 
 		final HttpResponse rsp = new HttpResponse();
 
-		rsp.setStatus(200);
-		rsp.setStatusMessage("OK");
+		rsp.setStatus(200, "OK");
 
 		Assert.assertEquals(200, rsp.getStatus());
 		Assert.assertEquals("OK", rsp.getStatusMessage());

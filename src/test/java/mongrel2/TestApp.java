@@ -26,7 +26,7 @@ public class TestApp {
 
 			final HttpResponse rsp = new HttpResponse();
 			rsp.setStatus(400, "Bad Request");
-			rsp.setDate();
+			rsp.setTimestampHeader();
 			rsp.setContentLength(0);
 
 			handler.send(rsp, req);

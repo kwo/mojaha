@@ -116,6 +116,7 @@ public class HttpHandler {
 		final String jsonHeaders = new String(raw, p1 + 1, length);
 		try {
 			final JSONObject headers = new JSONObject(jsonHeaders);
+			@SuppressWarnings("unchecked")
 			final Iterator<String> keys = headers.keys();
 			while (keys.hasNext()) {
 				final String key = keys.next();
