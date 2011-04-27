@@ -18,25 +18,25 @@ public class HttpHandlerTest {
 		int p1 = -1;
 		int length = 0;
 
-		p1 = HttpHandler.findNextDelimiter(raw, p0, ' ');
+		p1 = HttpRequest.findNextDelimiter(raw, p0, ' ');
 		Assert.assertEquals(-1, p0);
 		Assert.assertEquals(12, p1);
 		Assert.assertEquals("uuiduuiduuid", new String(raw, p0 + 1, p1 - p0 - 1));
 
 		p0 = p1;
-		p1 = HttpHandler.findNextDelimiter(raw, p0, ' ');
+		p1 = HttpRequest.findNextDelimiter(raw, p0, ' ');
 		Assert.assertEquals(12, p0);
 		Assert.assertEquals(23, p1);
 		Assert.assertEquals("request-id", new String(raw, p0 + 1, p1 - p0 - 1));
 
 		p0 = p1;
-		p1 = HttpHandler.findNextDelimiter(raw, p0, ' ');
+		p1 = HttpRequest.findNextDelimiter(raw, p0, ' ');
 		Assert.assertEquals(23, p0);
 		Assert.assertEquals(36, p1);
 		Assert.assertEquals("pathpathpath", new String(raw, p0 + 1, p1 - p0 - 1));
 
 		p0 = p1;
-		p1 = HttpHandler.findNextDelimiter(raw, p0, ':');
+		p1 = HttpRequest.findNextDelimiter(raw, p0, ':');
 		Assert.assertEquals(36, p0);
 		Assert.assertEquals(39, p1);
 		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
@@ -44,7 +44,7 @@ public class HttpHandlerTest {
 		Assert.assertEquals("datadatadat", new String(raw, p1 + 1, length));
 
 		p0 = p1 + length + 1;
-		p1 = HttpHandler.findNextDelimiter(raw, p0, ':');
+		p1 = HttpRequest.findNextDelimiter(raw, p0, ':');
 		Assert.assertEquals(51, p0);
 		Assert.assertEquals(53, p1);
 		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));

@@ -3,12 +3,9 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.zeromq.ZMQ;
 
 public class HttpHandler {
@@ -16,14 +13,6 @@ public class HttpHandler {
 	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final String LINE_TERMINATOR = "\r\n";
 	private static final char SPACE_CHAR = ' ';
-
-	static int findNextDelimiter(final byte[] raw, final int last, final char delimiter) {
-		final int start = last + 1;
-		for (int i = start; i < raw.length; i++)
-			if (raw[i] == delimiter)
-				return i;
-		return -1;
-	}
 
 	static String formatNetString(final HttpRequest[] requests) {
 		final String[] requestIds = new String[requests.length];
@@ -79,66 +68,11 @@ public class HttpHandler {
 	 * Retrieves the next Request, blocking.
 	 */
 	public HttpRequest recv() {
-
-		// TODO
-
-		final byte[] raw = this.requests.recv(0);
-
 		try {
-			System.out.write(raw);
-			System.out.println();
-		} catch (final IOException e) {
+			return HttpRequest.parse(this.requests.recv(0));
+		} catch (final JSONException x) {
+			throw new RuntimeException(x);
 		}
-
-		final HttpRequest req = new HttpRequest();
-
-		int p0 = -1;
-		int p1 = -1;
-		int length = 0;
-
-		// sender addr
-		p1 = findNextDelimiter(raw, p0, ' ');
-		req.setSenderAddr(new String(raw, p0 + 1, p1 - p0 - 1));
-
-		// request-id
-		p0 = p1;
-		p1 = findNextDelimiter(raw, p0, ' ');
-		req.setRequestId(new String(raw, p0 + 1, p1 - p0 - 1));
-
-		// matching path
-		p0 = p1;
-		p1 = findNextDelimiter(raw, p0, ' ');
-		req.setServletPath(new String(raw, p0 + 1, p1 - p0 - 1));
-
-		p0 = p1;
-		p1 = findNextDelimiter(raw, p0, ':');
-		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
-		final String jsonHeaders = new String(raw, p1 + 1, length);
-		try {
-			final JSONObject headers = new JSONObject(jsonHeaders);
-			@SuppressWarnings("unchecked")
-			final Iterator<String> keys = headers.keys();
-			while (keys.hasNext()) {
-				final String key = keys.next();
-				final String value = headers.getString(key);
-
-				if (key.equalsIgnoreCase("method")) {
-
-				} else {
-					req.setHeader(key, value);
-				}
-
-			}
-		} catch (final JSONException e) {
-		}
-
-		p0 = p1 + length + 1;
-		p1 = findNextDelimiter(raw, p0, ':');
-		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
-		req.setContent(Arrays.copyOfRange(raw, p1 + 1, p1 + 1 + length));
-
-		return req;
-
 	}
 
 	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {
@@ -182,7 +116,9 @@ public class HttpHandler {
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
-		out.write(response.getContent());
+		if (response.getContent().length > 0) {
+			out.write(response.getContent());
+		}
 
 		// send
 		this.responses.send(out.toByteArray(), 0);

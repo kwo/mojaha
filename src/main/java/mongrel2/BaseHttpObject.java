@@ -12,7 +12,7 @@ public abstract class BaseHttpObject {
 	protected static final String H_CONTENT_TYPE = "Content-Type";
 	protected static final String H_DATE = "Date";
 
-	protected byte[] content;
+	protected byte[] content = new byte[0];
 	private final SimpleDateFormat df;
 	private final Map<String, String[]> headers;
 
@@ -30,7 +30,7 @@ public abstract class BaseHttpObject {
 		if (!containsHeader(name)) {
 			setHeader(name, value);
 		} else {
-			final String[] values = this.headers.get(name);
+			final String[] values = getHeaderValues(name);
 			final String[] newValues = new String[values.length + 1];
 			for (int i = 0; i < values.length; i++)
 				newValues[i] = values[i];
@@ -70,8 +70,9 @@ public abstract class BaseHttpObject {
 	}
 
 	public String getHeader(final String name) {
-		if (containsHeader(name))
-			return getHeaderValues(name)[0];
+		final String key = name;
+		if (containsHeader(key))
+			return getHeaderValues(key)[0];
 		return null;
 	}
 
