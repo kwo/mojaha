@@ -1,8 +1,13 @@
 package mongrel2;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +50,64 @@ public class HttpResponse {
 
 	public void addIntHeader(final String name, final int value) {
 		addHeader(name, Integer.toString(value));
+	}
+
+	/**
+	 * Format response body for sending to mongrel2.
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	public byte[] formatBody() throws IOException {
+
+		final String LINE_TERMINATOR = "\r\n";
+		final char SPACE_CHAR = ' ';
+
+		final StringBuilder responseStr = new StringBuilder();
+
+		// body
+		responseStr.append("HTTP/1.1 ");
+		responseStr.append(getStatus());
+		responseStr.append(SPACE_CHAR);
+		responseStr.append(getStatusMessage());
+		responseStr.append(LINE_TERMINATOR);
+
+		// set content-length header
+		setIntHeader(H_CONTENT_LENGTH, getContent().length);
+
+		// get header names, sort list alphabetically
+		final List<String> headerNames = new ArrayList<String>();
+		for (final String headerName : getHeaderNames()) {
+			headerNames.add(headerName);
+		}
+		Collections.sort(headerNames);
+
+		// add date header
+		setTimestampHeader();
+		// add date header name to front of header name list
+		headerNames.add(0, H_DATE);
+
+		// headers
+		for (final String name : headerNames) {
+			for (final String value : getHeaderValues(name)) {
+				responseStr.append(name);
+				responseStr.append(": ");
+				responseStr.append(value);
+				responseStr.append(LINE_TERMINATOR);
+			}
+		}
+
+		responseStr.append(LINE_TERMINATOR);
+
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+		out.write(responseStr.toString().getBytes("US-ASCII"));
+		if (getContent().length > 0) {
+			out.write(getContent());
+		}
+		out.close();
+
+		return out.toByteArray();
+
 	}
 
 	public void setContent(final byte[] content) {
@@ -124,14 +187,6 @@ public class HttpResponse {
 		this.statusMessage = sm;
 	}
 
-	public void setTimestampHeader() {
-		setTimestampHeader(System.currentTimeMillis());
-	}
-
-	public void setTimestampHeader(final long time) {
-		setDateHeader(H_DATE, time);
-	}
-
 	boolean containsHeader(final String name) {
 		return this.headers.containsKey(name);
 	}
@@ -185,6 +240,14 @@ public class HttpResponse {
 
 	String getStatusMessage() {
 		return this.statusMessage;
+	}
+
+	void setTimestampHeader() {
+		setTimestampHeader(System.currentTimeMillis());
+	}
+
+	void setTimestampHeader(final long time) {
+		setDateHeader(H_DATE, time);
 	}
 
 }

@@ -26,8 +26,9 @@ public class TestApp {
 
 			final HttpResponse rsp = new HttpResponse();
 			rsp.setStatus(400, "Bad Request");
-			rsp.setTimestampHeader();
-			rsp.setContentLength(0);
+			rsp.setHeader("Cache-Control", "no-cache");
+			rsp.setHeader("X-Handler", "TestApp");
+			rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
 
 			handler.send(rsp, req);
 

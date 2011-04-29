@@ -11,7 +11,6 @@ import org.zeromq.ZMQ;
 public class HttpHandler {
 
 	private static final Charset ASCII = Charset.forName("US-ASCII");
-	private static final String LINE_TERMINATOR = "\r\n";
 	private static final char SPACE_CHAR = ' ';
 
 	static String formatNetString(final HttpRequest[] requests) {
@@ -91,34 +90,10 @@ public class HttpHandler {
 		responseStr.append(recipientNetString);
 		responseStr.append(SPACE_CHAR);
 
-		// body
-
-		responseStr.append("HTTP/1.1 ");
-		responseStr.append(response.getStatus());
-		responseStr.append(SPACE_CHAR);
-		responseStr.append(response.getStatusMessage());
-		responseStr.append(LINE_TERMINATOR);
-
-		// headers
-		for (final String name : response.getHeaderNames()) {
-			responseStr.append(name);
-			responseStr.append(": ");
-			final String[] values = response.getHeaderValues(name);
-			for (int i = 0; i < values.length; i++) {
-				if (i > 0)
-					responseStr.append(',');
-				responseStr.append(values[i]);
-			}
-			responseStr.append(LINE_TERMINATOR);
-		}
-
-		responseStr.append(LINE_TERMINATOR);
-
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
-		if (response.getContent().length > 0) {
-			out.write(response.getContent());
-		}
+		out.write(response.formatBody());
+		out.close();
 
 		// send
 		this.responses.send(out.toByteArray(), 0);
