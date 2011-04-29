@@ -19,11 +19,10 @@ public class HttpRequest {
 	private static final String H_CONTENT_LENGTH = "Content-Length";
 	private static final String H_CONTENT_TYPE = "Content-Type";
 	private static final String H_METHOD = "METHOD";
+	private static final String H_PATH = "PATH";
 	private static final String H_PROTOCOL = "VERSION";
-
 	private static final String H_QUERY_STRING = "QUERY";
 	private static final String H_SERVLET_PATH = "PATTERN";
-	private static final String H_URI = "URI";
 
 	public static HttpRequest parse(final byte[] raw) throws JSONException {
 
@@ -65,13 +64,30 @@ public class HttpRequest {
 			// System.out.printf("%s: %s%n", key, value);
 		}
 
-		// TODO: parameters
-
 		// content
 		p0 = p1 + length + 1;
 		p1 = findNextDelimiter(raw, p0, ':');
 		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
 		req.setContent(Arrays.copyOfRange(raw, p1 + 1, p1 + 1 + length));
+
+		// calculate fields
+
+		// path info: URI - PATTERN
+		req.pathinfo = req.getRequestURI().substring(req.getServletPath().length());
+
+		// host and port
+		final String[] hostport = req.getHeader("HOST").split(":");
+		req.host = hostport[0];
+		req.port = Integer.parseInt(hostport[1]);
+
+		// TODO: parameter URL-encoding
+		if (req.getQueryString() != null && req.getQueryString().length() > 0) {
+			final String[] paramEntries = req.getQueryString().split("&");
+			for (final String entry : paramEntries) {
+				final String[] kv = entry.split("=");
+				req.addParameter(kv[0], kv[1]);
+			}
+		}
 
 		return req;
 
@@ -85,25 +101,29 @@ public class HttpRequest {
 		return -1;
 	}
 
-	protected byte[] content = new byte[0];
-
 	private final Map<String, Object> attributes;
-
-	private String cachedRequestURI = null;
-
+	private byte[] content = new byte[0];
 	private final SimpleDateFormat df;
-
 	private final Map<String, String[]> headers;
+	private String host = null;
+	private final Map<String, String[]> params;
+	private String pathinfo = null;
+	private int port = 0;
 
 	public HttpRequest() {
+		this.attributes = new HashMap<String, Object>();
 		this.headers = new HashMap<String, String[]>();
+		this.params = new HashMap<String, String[]>();
 		this.df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
 		this.df.setTimeZone(TimeZone.getTimeZone("GMT"));
-		this.attributes = new HashMap<String, Object>();
 	}
 
 	public boolean containsHeader(final String name) {
 		return this.headers.containsKey(name);
+	}
+
+	public boolean containsParameter(final String name) {
+		return this.params.containsKey(name);
 	}
 
 	public Object getAttribute(final String name) {
@@ -158,9 +178,13 @@ public class HttpRequest {
 		return this.headers.get(name);
 	}
 
+	public String getHost() {
+		return this.host;
+	}
+
 	public int getIntHeader(final String name) {
 		if (!containsHeader(name))
-			return -1;
+			return 0;
 		return Integer.parseInt(getHeader(name));
 	}
 
@@ -168,9 +192,27 @@ public class HttpRequest {
 		return getHeader(H_METHOD);
 	}
 
-	public String getPathInfo() {
-		// TODO: pathinfo
+	public String getParameter(final String name) {
+		final String key = name;
+		if (containsParameter(key))
+			return getParameterValues(key)[0];
 		return null;
+	}
+
+	public Iterable<String> getParameterNames() {
+		return this.params.keySet();
+	}
+
+	public String[] getParameterValues(final String name) {
+		return this.params.get(name);
+	}
+
+	public String getPathInfo() {
+		return this.pathinfo;
+	}
+
+	public int getPort() {
+		return this.port;
 	}
 
 	public String getProtocol() {
@@ -186,16 +228,7 @@ public class HttpRequest {
 	}
 
 	public String getRequestURI() {
-
-		if (this.cachedRequestURI == null) {
-			this.cachedRequestURI = getHeader(H_URI);
-			final int qm = this.cachedRequestURI.indexOf('?');
-			if (qm > -1)
-				this.cachedRequestURI = this.cachedRequestURI.substring(0, qm);
-		}
-
-		return this.cachedRequestURI;
-
+		return getHeader(H_PATH);
 	}
 
 	public String getRequestURL() {
@@ -207,6 +240,11 @@ public class HttpRequest {
 		return (String) getAttribute(ATTR_SENDER_ADDR);
 	}
 
+	/**
+	 * The pattern that matched this query in Mongrel2.
+	 * 
+	 * @return
+	 */
 	public String getServletPath() {
 		return getHeader(H_SERVLET_PATH);
 	}
@@ -230,6 +268,19 @@ public class HttpRequest {
 
 	void addIntHeader(final String name, final int value) {
 		addHeader(name, Integer.toString(value));
+	}
+
+	void addParameter(final String name, final String value) {
+		if (!containsParameter(name)) {
+			setParameter(name, value);
+		} else {
+			final String[] values = getParameterValues(name);
+			final String[] newValues = new String[values.length + 1];
+			for (int i = 0; i < values.length; i++)
+				newValues[i] = values[i];
+			newValues[newValues.length - 1] = value;
+			this.params.put(name, newValues);
+		}
 	}
 
 	void removeAttribute(final String name) {
@@ -262,6 +313,10 @@ public class HttpRequest {
 
 	void setIntHeader(final String name, final int value) {
 		setHeader(name, Integer.toString(value));
+	}
+
+	void setParameter(final String name, final String value) {
+		this.params.put(name, new String[] { value });
 	}
 
 	void setRequestId(final String requestId) {
