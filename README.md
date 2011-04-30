@@ -1,6 +1,6 @@
-# MoJaBi: Mongrel2 Java Bindings
+# MoJaHa: Mongrel2 Java Handler
 ****
-Java bindings for the [Mongrel2](http://mongrel2.org/) web server.
+Java handler for the [Mongrel2](http://mongrel2.org/) web server.
 
 ## Example
 
@@ -18,7 +18,7 @@ Java bindings for the [Mongrel2](http://mongrel2.org/) web server.
  - Java 1.6 JDK
  - Maven 2.0 +
  - [jzmq](https://github.com/zeromq/jzmq): the Java bindings for [ZeroMQ](http://www.zeromq.org/).
-   As jzmq is not in the maven repositories, it will need to built and installed locally before compiling mojabi.
+   As jzmq is not in the maven repositories, it will need to built and installed locally before compiling mojaha.
    Additionally, jzmq also includes a native library which must also be built and installed locally
    as well as referenced in the java.library.path at runtime.
 
@@ -29,17 +29,17 @@ As an additional step, not in the readme, install the JAR into your local maven 
 
 				mvn install -Dmaven.test.skip=true
 				
-Now, build the mojabi JAR as follows:
+Now, build the mojaha JAR as follows:
 
-                cd mojabi
+                cd mojaha
                 mvn clean install
 
-A JAR file will be generated in the mojabi/target directory named mojabi-VERSION.jar.
+A JAR file will be generated in the mojaha/target directory named mojaha-VERSION.jar.
 
 ## Running
-When running your application with mojabi, the jzmq native library will need to be referenced in the java.library.path
+When running your application with mojaha, the jzmq native library will need to be referenced in the java.library.path
 
-                java -Djava.library.path=/path/to/jzmqlib -cp YourApp.jar:mojabi.jar your.App
+                java -Djava.library.path=/path/to/jzmqlib -cp YourApp.jar:mojaha.jar your.App
 
 ## Complete Example
 		package mongrel2;
