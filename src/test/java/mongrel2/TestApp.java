@@ -1,39 +1,64 @@
 package mongrel2;
 
+import java.io.IOException;
 import java.util.UUID;
 
-public class TestApp {
+public class TestApp implements Runnable {
 
 	private static String RECV_ADDR = "tcp://localhost:44401";
 	private static String SEND_ADDR = "tcp://localhost:44402";
-	private static final String SENDER_ID = UUID.randomUUID().toString();
 
 	public static void main(final String[] args) throws Exception {
 
-		final HttpHandler handler = new HttpHandler(SENDER_ID, RECV_ADDR, SEND_ADDR);
+		final TestApp app = new TestApp();
+
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				System.out.println();
 				System.out.println("Signal caught, exiting ...");
-				handler.setRunning(false);
+				app.handler.setRunning(false);
 			}
 		});
 
-		handler.setRunning(true);
 		System.out.println("Running. Ctrl-c to quit.");
 
-		while (handler.isRunning()) {
+		app.run(); // start in same thread although Runnable
 
-			final HttpRequest req = handler.recv();
+	}
 
-			final HttpResponse rsp = new HttpResponse();
-			rsp.setStatus(400, "Bad Request");
-			rsp.setHeader("Cache-Control", "no-cache");
-			rsp.setHeader("X-Handler", "TestApp");
-			rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
+	private final HttpHandler handler;;
+	private final String senderId;;
 
-			handler.send(rsp, req);
+	public TestApp() {
+		this.senderId = UUID.randomUUID().toString();
+		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
+	}
+
+	@Override
+	public void run() {
+
+		this.handler.setRunning(true);
+
+		System.out.printf("Started handler with sender id: %s%n", this.senderId);
+
+		while (this.handler.isRunning()) {
+
+			try {
+
+				final HttpRequest req = this.handler.recv();
+
+				final HttpResponse rsp = new HttpResponse();
+				rsp.setStatus(400, "Bad Request");
+				rsp.setHeader("Cache-Control", "no-cache");
+				rsp.setHeader("X-Handler", "TestApp");
+				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
+
+				this.handler.send(rsp, req);
+
+			} catch (final IOException x) {
+				x.printStackTrace();
+			}
 
 		}
 
