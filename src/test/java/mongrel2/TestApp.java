@@ -1,13 +1,16 @@
 package mongrel2;
 
+import java.util.UUID;
+
 public class TestApp {
 
-	private static String RECV_SPEC = "tcp://localhost:44401";
-	private static String SEND_SPEC = "tcp://localhost:44402";
+	private static String RECV_ADDR = "tcp://localhost:44401";
+	private static String SEND_ADDR = "tcp://localhost:44402";
+	private static final String SENDER_ID = UUID.randomUUID().toString();
 
 	public static void main(final String[] args) throws Exception {
 
-		final HttpHandler handler = new HttpHandler(RECV_SPEC, SEND_SPEC);
+		final HttpHandler handler = new HttpHandler(SENDER_ID, RECV_ADDR, SEND_ADDR);
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
