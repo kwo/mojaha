@@ -49,7 +49,8 @@ public class TestApp implements Runnable {
 				final HttpRequest req = this.handler.recv();
 
 				final HttpResponse rsp = new HttpResponse();
-				rsp.setStatus(400, "Bad Request");
+				rsp.setContent("Hello, world!");
+				rsp.setStatus(200, "OK");
 				rsp.setHeader("Cache-Control", "no-cache");
 				rsp.setHeader("X-Handler", "TestApp");
 				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
@@ -63,5 +64,4 @@ public class TestApp implements Runnable {
 		}
 
 	}
-
 }

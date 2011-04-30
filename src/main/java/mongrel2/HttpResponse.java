@@ -18,6 +18,7 @@ package mongrel2;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -135,6 +136,21 @@ public class HttpResponse {
 
 	public void setContent(final byte[] content) {
 		this.content = content;
+	}
+
+	/**
+	 * Set the content as a string. The string will be encoded as UTF8 and the
+	 * content-type will also be set to "text/plain; charset=utf-8".
+	 * 
+	 * @param content
+	 */
+	public void setContent(final String content) {
+		try {
+			setContent(content.getBytes("UTF-8"));
+			setContentType("text/plain; charset=utf-8");
+		} catch (final UnsupportedEncodingException x) {
+			throw new InternalError("JVM does not support UTF8 encoding.");
+		}
 	}
 
 	public void setContentLength(final int size) {
