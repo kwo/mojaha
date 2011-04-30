@@ -10,6 +10,22 @@
 	<name>mongrel2</name>
 	<url>http://karl.ostendorf.com</url>
 
+	<licenses>
+		<license>
+			<name>Apache v2</name>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>kwo</id>
+			<name>Karl Ostendorf</name>
+			<email>karl@ostendorf.com</email>
+			<url>http://karl.ostendorf.com/</url>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.6</maven.compiler.source>
