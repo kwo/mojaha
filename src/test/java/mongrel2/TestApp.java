@@ -38,8 +38,8 @@ public class TestApp implements Runnable {
 
 	}
 
-	private final HttpHandler handler;;
-	private final String senderId;;
+	private final HttpHandler handler;
+	private final String senderId;
 
 	public TestApp() {
 		this.senderId = UUID.randomUUID().toString();
