@@ -103,6 +103,19 @@ public class HttpRequest {
 		req.host = hostport[0];
 		req.port = Integer.parseInt(hostport[1]);
 
+		// requestURL
+		final StringBuilder requestURL = new StringBuilder();
+		if (req.getProtocol().toUpperCase().startsWith("HTTP")) {
+			requestURL.append("http://");
+		} else {
+			requestURL.append(req.getProtocol());
+		}
+		requestURL.append(req.getHost());
+		requestURL.append(':');
+		requestURL.append(req.getPort());
+		requestURL.append(req.getRequestURI());
+		req.requestURL = requestURL.toString();
+
 		// TODO: parameter URL-encoding
 		if (req.getQueryString() != null && req.getQueryString().length() > 0) {
 			final String[] paramEntries = req.getQueryString().split("&");
@@ -132,6 +145,7 @@ public class HttpRequest {
 	private final Map<String, String[]> params;
 	private String pathinfo = null;
 	private int port = 0;
+	private String requestURL = null;
 
 	public HttpRequest() {
 		this.attributes = new HashMap<String, Object>();
@@ -255,8 +269,7 @@ public class HttpRequest {
 	}
 
 	public String getRequestURL() {
-		// TODO: Request URL
-		return null;
+		return this.requestURL;
 	}
 
 	public String getSenderAddr() {
