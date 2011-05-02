@@ -38,15 +38,18 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponse {
 
+	private static final String DEFAULT_REASON_PHRASE = "Undefined";
 	private static final String H_CONTENT_LENGTH = "Content-Length";
 	private static final String H_CONTENT_TYPE = "Content-Type";
 	private static final String H_DATE = "Date";
 	private static final String H_EXPIRES = "Expires";
 	private static final String H_LAST_MODIFIED = "Last-Modified";
+
 	private byte[] content = new byte[0];
 	private final SimpleDateFormat df;
 	private final Map<String, String[]> headers;
 	private int statusCode = 0;
+
 	private String statusMessage = null;
 
 	public HttpResponse() {
@@ -216,11 +219,37 @@ public class HttpResponse {
 		setDateHeader(H_LAST_MODIFIED, date);
 	}
 
-	public void setStatus(final int statusCode) {
-		this.statusCode = statusCode;
-		// TODO: add status message
+	/**
+	 * Convenience method that calls {@link #setStatus(int, String)}.
+	 * 
+	 * @param status
+	 */
+	public void setStatus(final HttpStatus status) {
+		setStatus(status.code, status.msg);
 	}
 
+	/**
+	 * Convenience method that calls {@link #setStatus(int, String)}. The reason
+	 * phrase will be set automatically for know HTTP status codes.
+	 * 
+	 * 
+	 * @param statusCode
+	 */
+	public void setStatus(final int statusCode) {
+		final HttpStatus status = HttpStatus.findByCode(statusCode);
+		if (status == null) {
+			setStatus(statusCode, DEFAULT_REASON_PHRASE);
+		} else {
+			setStatus(statusCode, status.msg);
+		}
+	}
+
+	/**
+	 * Set the HTTP Status Code and corresponding resaon phrase.
+	 * 
+	 * @param sc
+	 * @param sm
+	 */
 	public void setStatus(final int sc, final String sm) {
 		this.statusCode = sc;
 		this.statusMessage = sm;

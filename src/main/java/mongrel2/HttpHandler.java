@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.json.JSONException;
 import org.zeromq.ZMQ;
 
 /**
@@ -103,11 +102,7 @@ public class HttpHandler {
 	 * Retrieves the next Request, blocking.
 	 */
 	public HttpRequest recv() {
-		try {
-			return HttpRequest.parse(this.requests.recv(0));
-		} catch (final JSONException x) {
-			throw new RuntimeException(x);
-		}
+		return HttpRequest.parse(this.requests.recv(0));
 	}
 
 	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {

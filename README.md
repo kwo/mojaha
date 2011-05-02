@@ -1,31 +1,34 @@
-# MoJaHa: Mongrel2 Java Handler
+# mojaha: Mongrel2 Java Handler
 ****
 Java handler for the [Mongrel2](http://mongrel2.org/) web server.
+mojaha is a [ZeroMQ](http://www.zeromq.org/)-based library that can read requests and send responses to Mongrel2.
+It aims for similarity but not compatibility with the Servlet API while also supporting asynchronous communications.
 
 ## Example
-
-				HttpHandler handler = new HttpHandler(SENDER_ID, RECV_ADDR, SEND_ADDR);
-				handler.setRunning(true);
-				while (handler.isRunning()) {
-					HttpRequest req = handler.recv();
-					HttpResponse rsp = new HttpResponse();
-					rsp.setContent("Hello, world!\n");
-					rsp.setStatus(200, "OK");
-					handler.send(rsp, req); // multiple requests may be given here
-				}
-
+```java
+HttpHandler handler = new HttpHandler(SENDER_ID, RECV_ADDR, SEND_ADDR);
+handler.setRunning(true);
+while (handler.isRunning()) {
+	HttpRequest req = handler.recv();
+	HttpResponse rsp = new HttpResponse();
+	rsp.setContent("Hello, world!\n");
+	// rsp.setContent("Hello, world!\n".getBytes("UTF-8"));
+	rsp.setStatus(HttpStatus.OK);
+	handler.send(rsp, req); // multiple requests may be given here
+}
+```
 ## Requirements
  - Java 1.6 JDK
- - Maven 2.0 +
+ - Maven 2 +
  - [jzmq](https://github.com/zeromq/jzmq): the Java bindings for [ZeroMQ](http://www.zeromq.org/).
    As jzmq is not in the maven repositories, it will need to built and installed locally before compiling mojaha.
-   Additionally, jzmq also includes a native library which must also be built and installed locally
-   as well as referenced in the java.library.path at runtime.
+   Additionally, jzmq includes a native library which must be built and installed locally as well as referenced
+   in the java.library.path at runtime.
 
 ## Building and Installing
 
 First, download and build jzmq according to the project [readme](https://github.com/zeromq/jzmq#readme).
-As an additional step, not in the readme, install the JAR into your local maven reporitory as follows:
+As an additional step, not in the readme, install the JAR into your local maven repository as follows:
 
 				mvn install -Dmaven.test.skip=true
 				
@@ -42,87 +45,90 @@ When running your application with mojaha, the jzmq native library will need to 
                 java -Djava.library.path=/path/to/jzmqlib -cp YourApp.jar:mojaha.jar your.App
 
 ## Complete Example
-		package mongrel2;
+```java
+package mongrel2;
 
-		import java.io.IOException;
-		import java.util.List;
-		import java.util.UUID;
-		import java.util.concurrent.CopyOnWriteArrayList;
-		import java.util.concurrent.ExecutorService;
-		import java.util.concurrent.Executors;
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-		public class TestApp implements Runnable {
+public class TestApp implements Runnable {
 
-			private static final String RECV_ADDR = "tcp://localhost:44401";
-			private static final String SEND_ADDR = "tcp://localhost:44402";
-			private static final int THREADS = 3;
+	private static final String RECV_ADDR = "tcp://localhost:44401";
+	private static final String SEND_ADDR = "tcp://localhost:44402";
+	private static final int THREADS = 3;
 
-			public static void main(final String[] args) throws Exception {
+	public static void main(final String[] args) throws Exception {
 
-				final ExecutorService exec = Executors.newFixedThreadPool(THREADS);
-				final List<TestApp> apps = new CopyOnWriteArrayList<TestApp>();
-				for (int i = 0; i < THREADS; i++)
-					apps.add(new TestApp());
+		final ExecutorService exec = Executors.newFixedThreadPool(THREADS);
+		final List<TestApp> apps = new CopyOnWriteArrayList<TestApp>();
+		for (int i = 0; i < THREADS; i++)
+			apps.add(new TestApp());
 
-				Runtime.getRuntime().addShutdownHook(new Thread() {
-					@Override
-					public void run() {
-						System.out.println();
-						System.out.println("Signal caught, exiting ...");
-						for (final TestApp app : apps)
-							app.handler.setRunning(false);
-						exec.shutdownNow();
-					}
-				});
-
-				System.out.println("Running. Ctrl-c to quit.");
-
-				for (final TestApp app : apps)
-					exec.submit(app);
-
-			}
-
-			private final HttpHandler handler;
-			private final String senderId;
-
-			public TestApp() {
-				this.senderId = UUID.randomUUID().toString();
-				this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
-			}
-
+		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-
-				this.handler.setRunning(true);
-
-				System.out.printf("Started handler with sender id: %s%n", this.senderId);
-
-				while (this.handler.isRunning()) {
-
-					try {
-
-						final HttpRequest req = this.handler.recv();
-
-						final long now = System.currentTimeMillis();
-						System.out.printf("%tH:%tM:%tS - %s %s%n", now, now, now, this.senderId, req.getRequestURL());
-
-						final HttpResponse rsp = new HttpResponse();
-						rsp.setContent("Hello, world!\n");
-						rsp.setStatus(200, "OK");
-						rsp.setHeader("Cache-Control", "no-cache");
-						rsp.setHeader("X-Handler-App", "TestApp");
-						rsp.setHeader("X-Sender-Id", this.senderId);
-						rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
-
-						this.handler.send(rsp, req);
-
-					} catch (final IOException x) {
-						x.printStackTrace();
-					}
-
-				} // while
-
-				System.out.printf("Exiting handler with sender id: %s%n", this.senderId);
-
+				System.out.println();
+				System.out.println("Signal caught, exiting ...");
+				for (final TestApp app : apps)
+					app.handler.setRunning(false);
+				exec.shutdownNow();
 			}
-		}
+		});
+
+		System.out.println("Running. Ctrl-c to quit.");
+
+		for (final TestApp app : apps)
+			exec.submit(app);
+
+	}
+
+	private final HttpHandler handler;
+	private final String senderId;
+
+	public TestApp() {
+		this.senderId = UUID.randomUUID().toString();
+		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
+	}
+
+	@Override
+	public void run() {
+
+		this.handler.setRunning(true);
+
+		System.out.printf("Started handler with sender id: %s%n", this.senderId);
+
+		while (this.handler.isRunning()) {
+
+			try {
+
+				final HttpRequest req = this.handler.recv();
+
+				final long now = System.currentTimeMillis();
+				System.out.printf("%tH:%tM:%tS - %s %s%n", now, now, now, this.senderId, req.getRequestURL());
+
+				final HttpResponse rsp = new HttpResponse();
+				rsp.setContent("Hello, world!\n");
+				rsp.setStatus(HttpStatus.OK);
+				// rsp.setStatus(HttpStatus.BadRequest.code, "Nice Try");
+				rsp.setHeader("Cache-Control", "no-cache");
+				rsp.setHeader("X-Handler-App", "TestApp");
+				rsp.setHeader("X-Sender-Id", this.senderId);
+				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
+
+				this.handler.send(rsp, req);
+
+			} catch (final IOException x) {
+				x.printStackTrace();
+			}
+
+		} // while
+
+		System.out.printf("Exiting handler with sender id: %s%n", this.senderId);
+
+	}
+}
+```

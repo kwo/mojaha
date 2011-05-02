@@ -33,6 +33,30 @@ public class HttpRequestTest {
 	}
 
 	@Test
+	public void testHeaderCaseInsensitivity() throws Exception {
+
+		final HttpRequest req = new HttpRequest();
+
+		req.setIntHeader("Content-Length", 128);
+		req.addHeader("Content-Type", "application/xml");
+		req.addHeader("CONTENT-TYPE", "application/json");
+
+		int counter = 0;
+		for (@SuppressWarnings("unused")
+		final String name : req.getHeaderNames()) {
+			counter++;
+		}
+		Assert.assertEquals(2, counter);
+
+		Assert.assertEquals(128, req.getIntHeader("content-length"));
+		Assert.assertEquals("application/xml", req.getHeader("content-type"));
+		Assert.assertEquals(2, req.getHeaderValues("content-type").length);
+		Assert.assertEquals("application/xml", req.getHeaderValues("content-type")[0]);
+		Assert.assertEquals("application/json", req.getHeaderValues("content-type")[1]);
+
+	}
+
+	@Test
 	public void testHeaders() throws Exception {
 
 		final HttpRequest req = new HttpRequest();
@@ -99,17 +123,17 @@ public class HttpRequestTest {
 		Assert.assertEquals(req.getAttribute(HttpRequest.ATTR_SENDER_ADDR), req.getSenderAddr());
 
 		// request id
-		Assert.assertEquals("0", req.getAttribute(HttpRequest.ATTR_REQUEST_ID));
+		Assert.assertEquals("57", req.getAttribute(HttpRequest.ATTR_REQUEST_ID));
 		Assert.assertEquals(req.getAttribute(HttpRequest.ATTR_REQUEST_ID), req.getRequestId());
 
 		// ----- HEADERS -----
 
-		// TODO: request url has no direct match
-		// Assert.assertEquals("http://localhost:6767//search/for/a/string",
-		// req.getRequestURL());
+		// request url has no direct match
+		Assert.assertEquals("http://localhost:6767/search/for/a/string", req.getRequestURL().toString());
 
 		// URI has no direct match
-		Assert.assertEquals("/search/for/a/string?p1=33&p1=22&p2=hello", req.getHeader("URI"));
+		Assert.assertEquals("/search/for/a/string?p1=33&p1=22&p2=search%20for%20a%20clue&p3=search+for+a+clue",
+				req.getHeader("URI"));
 
 		// PATH == requestURI
 		Assert.assertEquals("/search/for/a/string", req.getHeader("PATH"));
@@ -127,14 +151,20 @@ public class HttpRequestTest {
 		Assert.assertEquals("HTTP/1.1", req.getHeader("VERSION"));
 		Assert.assertEquals(req.getHeader("VERSION"), req.getProtocol());
 
+		// scheme
+		Assert.assertEquals("http", req.getScheme());
+
+		// isSecure
+		Assert.assertTrue(!req.isSecure());
+
 		// METHOD == method
 		Assert.assertEquals("GET", req.getHeader("METHOD"));
 		Assert.assertEquals(req.getHeader("METHOD"), req.getMethod());
 
 		// HOST has no direct match
-		Assert.assertEquals("localhost:6767", req.getHeader("HOST"));
-		Assert.assertEquals("localhost", req.getHost());
-		Assert.assertEquals(6767, req.getPort());
+		Assert.assertEquals("localhost:6767", req.getHeader("host"));
+		Assert.assertEquals("localhost", req.getServerName());
+		Assert.assertEquals(6767, req.getServerPort());
 
 		// content-length
 		Assert.assertEquals(0, req.getIntHeader("Content-Length"));
@@ -149,7 +179,7 @@ public class HttpRequestTest {
 		Assert.assertEquals(0, req.getContent().length);
 
 		// QUERY == queryString
-		Assert.assertEquals("p1=33&p1=22&p2=hello", req.getHeader("QUERY"));
+		Assert.assertEquals("p1=33&p1=22&p2=search%20for%20a%20clue&p3=search+for+a+clue", req.getHeader("QUERY"));
 		Assert.assertEquals(req.getHeader("QUERY"), req.getQueryString());
 
 		Assert.assertTrue(req.containsParameter("p1"));
@@ -160,8 +190,13 @@ public class HttpRequestTest {
 
 		Assert.assertTrue(req.containsParameter("p2"));
 		Assert.assertEquals(1, req.getParameterValues("p2").length);
-		Assert.assertEquals("hello", req.getParameter("p2"));
-		Assert.assertEquals("hello", req.getParameterValues("p2")[0]);
+		Assert.assertEquals("search for a clue", req.getParameter("p2"));
+		Assert.assertEquals("search for a clue", req.getParameterValues("p2")[0]);
+
+		Assert.assertTrue(req.containsParameter("p3"));
+		Assert.assertEquals(1, req.getParameterValues("p3").length);
+		Assert.assertEquals("search for a clue", req.getParameter("p3"));
+		Assert.assertEquals("search for a clue", req.getParameterValues("p3")[0]);
 
 		// reverse proof for contains header
 		Assert.assertFalse(req.containsHeader("bogus-header-name"));

@@ -64,7 +64,8 @@ public class TestApp implements Runnable {
 
 				final HttpResponse rsp = new HttpResponse();
 				rsp.setContent("Hello, world!\n");
-				rsp.setStatus(200, "OK");
+				rsp.setStatus(HttpStatus.OK);
+				// rsp.setStatus(HttpStatus.BadRequest.code, "Nice Try");
 				rsp.setHeader("Cache-Control", "no-cache");
 				rsp.setHeader("X-Handler-App", "TestApp");
 				rsp.setHeader("X-Sender-Id", this.senderId);

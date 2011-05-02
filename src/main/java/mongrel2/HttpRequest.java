@@ -16,6 +16,9 @@
 
 package mongrel2;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -43,11 +46,23 @@ public class HttpRequest {
 	private static final String H_CONTENT_TYPE = "Content-Type";
 	private static final String H_METHOD = "METHOD";
 	private static final String H_PATH = "PATH";
+	private static final String H_PATTERN = "PATTERN";
 	private static final String H_PROTOCOL = "VERSION";
 	private static final String H_QUERY_STRING = "QUERY";
-	private static final String H_SERVLET_PATH = "PATTERN";
 
-	public static HttpRequest parse(final byte[] raw) throws JSONException {
+	private static final Charset UTF8 = Charset.forName("UTF-8");
+
+	public static HttpRequest parse(final byte[] raw) {
+
+		// Mongrel2 sends requests formatted as follows:
+		// UUID ID PATH SIZE:HEADERS,SIZE:BODY,
+
+		try {
+			System.out.write(raw);
+			System.out.println();
+		} catch (final Exception x) {
+			// ignore
+		}
 
 		final HttpRequest req = new HttpRequest();
 
@@ -74,17 +89,19 @@ public class HttpRequest {
 		p0 = p1;
 		p1 = findNextDelimiter(raw, p0, ':');
 		length = Integer.parseInt(new String(raw, p0 + 1, p1 - p0 - 1));
-		final String jsonHeaders = new String(raw, p1 + 1, length);
-		// System.out.println(jsonHeaders);
-		// System.out.println();
-		final JSONObject headers = new JSONObject(jsonHeaders);
-		@SuppressWarnings("unchecked")
-		final Iterator<String> keys = headers.keys();
-		while (keys.hasNext()) {
-			final String key = keys.next();
-			final String value = headers.getString(key);
-			req.addHeader(key.toUpperCase(), value);
-			// System.out.printf("%s: %s%n", key, value);
+		final String jsonHeaders = new String(raw, p1 + 1, length, UTF8);
+		try {
+			final JSONObject headers = new JSONObject(jsonHeaders);
+			@SuppressWarnings("unchecked")
+			final Iterator<String> i = headers.keys();
+			while (i.hasNext()) {
+				final String key = i.next();
+				final String value = headers.getString(key);
+				// System.out.printf("%s: %s%n", key, value);
+				req.addHeader(key, value);
+			}
+		} catch (final JSONException x) {
+			throw new RuntimeException("Mongrel2 sent unparsable headers: " + jsonHeaders);
 		}
 
 		// content
@@ -95,33 +112,53 @@ public class HttpRequest {
 
 		// calculate fields
 
+		// scheme
+		req.scheme = req.getProtocol().split("/")[0].toLowerCase();
+
+		// secure
+		req.secure = (req.getScheme().equals("https"));
+
+		// host and port
+		final String[] hostport = req.getHeader("host").split(":");
+		req.serverName = hostport[0];
+		req.serverPort = Integer.parseInt(hostport[1]);
+
+		// servlet path: handler path with out the pattern
+		final int posPatternStart = req.getHeader(H_PATTERN).indexOf('(');
+		if (posPatternStart == -1) {
+			req.servletPath = req.getHeader(H_PATTERN);
+		} else {
+			req.servletPath = req.getHeader(H_PATTERN).substring(0, posPatternStart);
+		}
+
 		// path info: URI - PATTERN
 		req.pathinfo = req.getRequestURI().substring(req.getServletPath().length());
 
-		// host and port
-		final String[] hostport = req.getHeader("HOST").split(":");
-		req.host = hostport[0];
-		req.port = Integer.parseInt(hostport[1]);
-
 		// requestURL
 		final StringBuilder requestURL = new StringBuilder();
-		if (req.getProtocol().toUpperCase().startsWith("HTTP")) {
-			requestURL.append("http://");
-		} else {
-			requestURL.append(req.getProtocol());
+		requestURL.append(req.getScheme());
+		requestURL.append("://");
+		requestURL.append(req.getServerName());
+		if ((req.getScheme().equals("http") && req.getServerPort() != 80)
+				|| (req.getScheme().equals("https") && req.getServerPort() != 443)) {
+			requestURL.append(':');
+			requestURL.append(req.getServerPort());
 		}
-		requestURL.append(req.getHost());
-		requestURL.append(':');
-		requestURL.append(req.getPort());
 		requestURL.append(req.getRequestURI());
 		req.requestURL = requestURL.toString();
 
-		// TODO: parameter URL-encoding
+		// parameters
 		if (req.getQueryString() != null && req.getQueryString().length() > 0) {
-			final String[] paramEntries = req.getQueryString().split("&");
-			for (final String entry : paramEntries) {
-				final String[] kv = entry.split("=");
-				req.addParameter(kv[0], kv[1]);
+			try {
+				final String[] paramEntries = req.getQueryString().split("&");
+				for (final String entry : paramEntries) {
+					final String[] kv = entry.split("=");
+					final String key = URLDecoder.decode(kv[0], UTF8.name());
+					final String value = URLDecoder.decode(kv[1], UTF8.name());
+					req.addParameter(key, value);
+				}
+			} catch (final UnsupportedEncodingException x) {
+				throw new InternalError("JVM does not support " + UTF8.name());
 			}
 		}
 
@@ -129,7 +166,7 @@ public class HttpRequest {
 
 	}
 
-	static int findNextDelimiter(final byte[] raw, final int last, final char delimiter) {
+	private static int findNextDelimiter(final byte[] raw, final int last, final char delimiter) {
 		final int start = last + 1;
 		for (int i = start; i < raw.length; i++)
 			if (raw[i] == delimiter)
@@ -140,23 +177,30 @@ public class HttpRequest {
 	private final Map<String, Object> attributes;
 	private byte[] content = new byte[0];
 	private final SimpleDateFormat df;
-	private final Map<String, String[]> headers;
-	private String host = null;
+	private final Map<String, String[]> headers; // all keys uppercase
+	private final Map<String, String> headersOriginalKeyNames;
 	private final Map<String, String[]> params;
 	private String pathinfo = null;
-	private int port = 0;
 	private String requestURL = null;
+	private String scheme = null;
+	private boolean secure = false;
+	private String serverName = null;
+	private int serverPort = 0;
+	private String servletPath = null;
 
 	public HttpRequest() {
 		this.attributes = new HashMap<String, Object>();
 		this.headers = new HashMap<String, String[]>();
+		this.headersOriginalKeyNames = new HashMap<String, String>();
 		this.params = new HashMap<String, String[]>();
 		this.df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
 		this.df.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
 
 	public boolean containsHeader(final String name) {
-		return this.headers.containsKey(name);
+		if (name == null)
+			return false;
+		return this.headers.containsKey(name.toUpperCase());
 	}
 
 	public boolean containsParameter(final String name) {
@@ -175,10 +219,21 @@ public class HttpRequest {
 		return this.content;
 	}
 
+	/**
+	 * Returns the value of the Content-Length header, if present, otherwise
+	 * zero.
+	 * 
+	 * @return Value of the Content-Length header
+	 */
 	public int getContentLength() {
 		return getIntHeader(H_CONTENT_LENGTH);
 	}
 
+	/**
+	 * Returns the value of the Content-Type header, if present.
+	 * 
+	 * @return Value of the Content-Type header
+	 */
 	public String getContentType() {
 		return getHeader(H_CONTENT_TYPE);
 	}
@@ -208,15 +263,13 @@ public class HttpRequest {
 	}
 
 	public Iterable<String> getHeaderNames() {
-		return this.headers.keySet();
+		return this.headersOriginalKeyNames.values();
 	}
 
 	public String[] getHeaderValues(final String name) {
-		return this.headers.get(name);
-	}
-
-	public String getHost() {
-		return this.host;
+		if (name == null)
+			return null;
+		return this.headers.get(name.toUpperCase());
 	}
 
 	public int getIntHeader(final String name) {
@@ -248,10 +301,6 @@ public class HttpRequest {
 		return this.pathinfo;
 	}
 
-	public int getPort() {
-		return this.port;
-	}
-
 	public String getProtocol() {
 		return getHeader(H_PROTOCOL);
 	}
@@ -268,12 +317,24 @@ public class HttpRequest {
 		return getHeader(H_PATH);
 	}
 
-	public String getRequestURL() {
-		return this.requestURL;
+	public StringBuffer getRequestURL() {
+		return new StringBuffer(this.requestURL);
+	}
+
+	public String getScheme() {
+		return this.scheme;
 	}
 
 	public String getSenderAddr() {
 		return (String) getAttribute(ATTR_SENDER_ADDR);
+	}
+
+	public String getServerName() {
+		return this.serverName;
+	}
+
+	public int getServerPort() {
+		return this.serverPort;
 	}
 
 	/**
@@ -282,7 +343,11 @@ public class HttpRequest {
 	 * @return
 	 */
 	public String getServletPath() {
-		return getHeader(H_SERVLET_PATH);
+		return this.servletPath;
+	}
+
+	public boolean isSecure() {
+		return this.secure;
 	}
 
 	void addDateHeader(final String name, final long value) {
@@ -298,7 +363,7 @@ public class HttpRequest {
 			for (int i = 0; i < values.length; i++)
 				newValues[i] = values[i];
 			newValues[newValues.length - 1] = value;
-			this.headers.put(name, newValues);
+			setHeader(name, newValues);
 		}
 	}
 
@@ -315,7 +380,7 @@ public class HttpRequest {
 			for (int i = 0; i < values.length; i++)
 				newValues[i] = values[i];
 			newValues[newValues.length - 1] = value;
-			this.params.put(name, newValues);
+			setParameter(name, newValues);
 		}
 	}
 
@@ -344,7 +409,12 @@ public class HttpRequest {
 	}
 
 	void setHeader(final String name, final String value) {
-		this.headers.put(name, new String[] { value });
+		setHeader(name, new String[] { value });
+	}
+
+	void setHeader(final String name, final String[] values) {
+		this.headersOriginalKeyNames.put(name.toUpperCase(), name);
+		this.headers.put(name.toUpperCase(), values);
 	}
 
 	void setIntHeader(final String name, final int value) {
@@ -352,7 +422,11 @@ public class HttpRequest {
 	}
 
 	void setParameter(final String name, final String value) {
-		this.params.put(name, new String[] { value });
+		setParameter(name, new String[] { value });
+	}
+
+	void setParameter(final String name, final String[] values) {
+		this.params.put(name, values);
 	}
 
 	void setRequestId(final String requestId) {

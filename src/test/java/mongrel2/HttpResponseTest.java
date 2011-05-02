@@ -216,6 +216,139 @@ public class HttpResponseTest {
 	}
 
 	@Test
+	public void testReasonPhrases() throws Exception {
+
+		final HttpResponse rsp = new HttpResponse();
+
+		rsp.setStatus(100);
+		Assert.assertEquals("Continue", rsp.getStatusMessage());
+
+		rsp.setStatus(101);
+		Assert.assertEquals("Switching Protocols", rsp.getStatusMessage());
+
+		rsp.setStatus(200);
+		Assert.assertEquals("OK", rsp.getStatusMessage());
+
+		rsp.setStatus(201);
+		Assert.assertEquals("Created", rsp.getStatusMessage());
+
+		rsp.setStatus(202);
+		Assert.assertEquals("Accepted", rsp.getStatusMessage());
+
+		rsp.setStatus(203);
+		Assert.assertEquals("Non-Authoritative Information", rsp.getStatusMessage());
+
+		rsp.setStatus(204);
+		Assert.assertEquals("No Content", rsp.getStatusMessage());
+
+		rsp.setStatus(205);
+		Assert.assertEquals("Reset Content", rsp.getStatusMessage());
+
+		rsp.setStatus(206);
+		Assert.assertEquals("Partial Content", rsp.getStatusMessage());
+
+		rsp.setStatus(300);
+		Assert.assertEquals("Multiple Choices", rsp.getStatusMessage());
+
+		rsp.setStatus(301);
+		Assert.assertEquals("Moved Permanently", rsp.getStatusMessage());
+
+		rsp.setStatus(302);
+		Assert.assertEquals("Found", rsp.getStatusMessage());
+
+		rsp.setStatus(303);
+		Assert.assertEquals("See Other", rsp.getStatusMessage());
+
+		rsp.setStatus(304);
+		Assert.assertEquals("Not Modified", rsp.getStatusMessage());
+
+		rsp.setStatus(305);
+		Assert.assertEquals("Use Proxy", rsp.getStatusMessage());
+
+		rsp.setStatus(307);
+		Assert.assertEquals("Temporary Redirect", rsp.getStatusMessage());
+
+		rsp.setStatus(400);
+		Assert.assertEquals("Bad Request", rsp.getStatusMessage());
+
+		rsp.setStatus(401);
+		Assert.assertEquals("Unauthorized", rsp.getStatusMessage());
+
+		rsp.setStatus(402);
+		Assert.assertEquals("Payment Required", rsp.getStatusMessage());
+
+		rsp.setStatus(403);
+		Assert.assertEquals("Forbidden", rsp.getStatusMessage());
+
+		rsp.setStatus(404);
+		Assert.assertEquals("Not Found", rsp.getStatusMessage());
+
+		rsp.setStatus(405);
+		Assert.assertEquals("Method Not Allowed", rsp.getStatusMessage());
+
+		rsp.setStatus(406);
+		Assert.assertEquals("Not Acceptable", rsp.getStatusMessage());
+
+		rsp.setStatus(407);
+		Assert.assertEquals("Proxy Authentication Required", rsp.getStatusMessage());
+
+		rsp.setStatus(408);
+		Assert.assertEquals("Request Time-out", rsp.getStatusMessage());
+
+		rsp.setStatus(409);
+		Assert.assertEquals("Conflict", rsp.getStatusMessage());
+
+		rsp.setStatus(410);
+		Assert.assertEquals("Gone", rsp.getStatusMessage());
+
+		rsp.setStatus(411);
+		Assert.assertEquals("Length Required", rsp.getStatusMessage());
+
+		rsp.setStatus(412);
+		Assert.assertEquals("Precondition Failed", rsp.getStatusMessage());
+
+		rsp.setStatus(413);
+		Assert.assertEquals("Request Entity Too Large", rsp.getStatusMessage());
+
+		rsp.setStatus(414);
+		Assert.assertEquals("Request-URI Too Large", rsp.getStatusMessage());
+
+		rsp.setStatus(415);
+		Assert.assertEquals("Unsupported Media Type", rsp.getStatusMessage());
+
+		rsp.setStatus(416);
+		Assert.assertEquals("Requested range not satisfiable", rsp.getStatusMessage());
+
+		rsp.setStatus(417);
+		Assert.assertEquals("Expectation Failed", rsp.getStatusMessage());
+
+		rsp.setStatus(500);
+		Assert.assertEquals("Internal Server Error", rsp.getStatusMessage());
+
+		rsp.setStatus(501);
+		Assert.assertEquals("Not Implemented", rsp.getStatusMessage());
+
+		rsp.setStatus(502);
+		Assert.assertEquals("Bad Gateway", rsp.getStatusMessage());
+
+		rsp.setStatus(503);
+		Assert.assertEquals("Service Unavailable", rsp.getStatusMessage());
+
+		rsp.setStatus(504);
+		Assert.assertEquals("Gateway Time-out", rsp.getStatusMessage());
+
+		rsp.setStatus(505);
+		Assert.assertEquals("HTTP Version not supported", rsp.getStatusMessage());
+
+		rsp.setStatus(1000);
+		Assert.assertEquals("Undefined", rsp.getStatusMessage());
+
+		rsp.setStatus(400, "Nice Try Buddy");
+		Assert.assertEquals("Nice Try Buddy", rsp.getStatusMessage());
+
+	}
+
+	@Test
 	public void testStatus() throws Exception {
 
 		final HttpResponse rsp = new HttpResponse();
