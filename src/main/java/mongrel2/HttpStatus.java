@@ -1,5 +1,11 @@
 package mongrel2;
 
+/**
+ * HTTP status codes with accompanying reason phrases.
+ * 
+ * @author Karl Ostendorf
+ *
+ */
 public enum HttpStatus {
 
 	Continue(100, "Continue"),
@@ -47,6 +53,13 @@ public enum HttpStatus {
 	GatewayTimeout(504, "Gateway Time-out"),
 	HttpVersionNotSupported(505, "HTTP Version not supported");
 
+	/**
+	 * Returns the HttpStatus instance for a given HTTP status code.
+	 * 
+	 * @param code
+	 *            HTTP status code
+	 * @return HttpStatus instance for the given code, or null if not found.
+	 */
 	public static HttpStatus findByCode(final int code) {
 		for (final HttpStatus status : values())
 			if (code == status.code)

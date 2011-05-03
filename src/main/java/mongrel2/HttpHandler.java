@@ -28,7 +28,7 @@ import org.zeromq.ZMQ;
  * ZeroMQ socket to read requests and allows responses to be returned via the
  * separate publishing socket.
  * 
- * @author kwo
+ * @author Karl Ostendorf
  * 
  */
 public class HttpHandler {

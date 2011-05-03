@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * HTTP response object used to return responses to the Mongrel2 web server;
  * slightly modelled after HttpServletResponse of the Servlet API.
  * 
- * @author kwo
+ * @author Karl Ostendorf
  * 
  */
 public class HttpResponse {
@@ -82,7 +82,7 @@ public class HttpResponse {
 	/**
 	 * Format response body for sending to mongrel2.
 	 * 
-	 * @return
+	 * @return byte array containing the response body
 	 * @throws IOException
 	 */
 	public byte[] formatBody() throws IOException {
@@ -134,6 +134,20 @@ public class HttpResponse {
 		out.close();
 
 		return out.toByteArray();
+
+	}
+
+	/**
+	 * Send a simple plain text response back to the requester, using the http
+	 * reason phrase as the body contents.
+	 * 
+	 * @param status
+	 */
+	public void sendError(final HttpStatus status) {
+
+		setContent(status.msg + "\n");
+		setHeader("Cache-Control", "no-cache");
+		setDateHeader(H_LAST_MODIFIED, System.currentTimeMillis());
 
 	}
 

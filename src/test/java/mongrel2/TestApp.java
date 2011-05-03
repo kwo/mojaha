@@ -1,24 +1,26 @@
 package mongrel2;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class TestApp implements Runnable {
 
+	// The socket on which the handler will receive messages. The same as the
+	// send_spec in the mongrel2 handler configuration.
 	private static final String RECV_ADDR = "tcp://localhost:44401";
+	// The socket on which the handler will send messages. The same as the
+	// recv_spec in the mongrel2 handler configuration.
 	private static final String SEND_ADDR = "tcp://localhost:44402";
 	private static final int THREADS = 3;
 
 	public static void main(final String[] args) throws Exception {
 
 		final ExecutorService exec = Executors.newFixedThreadPool(THREADS);
-		final List<TestApp> apps = new CopyOnWriteArrayList<TestApp>();
+		final TestApp[] apps = new TestApp[THREADS];
 		for (int i = 0; i < THREADS; i++)
-			apps.add(new TestApp());
+			apps[i] = new TestApp();
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override

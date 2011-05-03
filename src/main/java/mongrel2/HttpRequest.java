@@ -34,13 +34,15 @@ import org.json.JSONObject;
  * HTTP request object as sent from the Mongrel2 web server; slightly modelled
  * after HttpServletRequest of the Servlet API.
  * 
- * @author kwo
+ * @author Karl Ostendorf
  * 
  */
 public class HttpRequest {
 
 	public static final String ATTR_REQUEST_ID = "request-id";
 	public static final String ATTR_SENDER_ADDR = "sender-addr";
+
+	private static final Charset ASCII = Charset.forName("US-ASCII");
 
 	private static final String H_CONTENT_LENGTH = "Content-Length";
 	private static final String H_CONTENT_TYPE = "Content-Type";
@@ -57,12 +59,12 @@ public class HttpRequest {
 		// Mongrel2 sends requests formatted as follows:
 		// UUID ID PATH SIZE:HEADERS,SIZE:BODY,
 
-		try {
-			System.out.write(raw);
-			System.out.println();
-		} catch (final Exception x) {
-			// ignore
-		}
+		// try {
+		// System.out.write(raw);
+		// System.out.println();
+		// } catch (final Exception x) {
+		// // ignore
+		// }
 
 		final HttpRequest req = new HttpRequest();
 
@@ -72,12 +74,12 @@ public class HttpRequest {
 
 		// sender addr
 		p1 = findNextDelimiter(raw, p0, ' ');
-		req.setSenderAddr(new String(raw, p0 + 1, p1 - p0 - 1));
+		req.setSenderAddr(new String(raw, p0 + 1, p1 - p0 - 1, ASCII));
 
 		// request-id
 		p0 = p1;
 		p1 = findNextDelimiter(raw, p0, ' ');
-		req.setRequestId(new String(raw, p0 + 1, p1 - p0 - 1));
+		req.setRequestId(new String(raw, p0 + 1, p1 - p0 - 1, ASCII));
 
 		// matching path
 		p0 = p1;
@@ -101,7 +103,7 @@ public class HttpRequest {
 				req.addHeader(key, value);
 			}
 		} catch (final JSONException x) {
-			throw new RuntimeException("Mongrel2 sent unparsable headers: " + jsonHeaders);
+			throw new RuntimeException("Cannot parse Json headers: " + jsonHeaders);
 		}
 
 		// content
@@ -253,7 +255,7 @@ public class HttpRequest {
 	 * a header, use {@link #getHeaderValues(String)}
 	 * 
 	 * @param name
-	 * @return
+	 * @return the first value for the named header
 	 */
 	public String getHeader(final String name) {
 		final String key = name;
@@ -338,9 +340,10 @@ public class HttpRequest {
 	}
 
 	/**
-	 * The pattern that matched this query in Mongrel2.
+	 * Returns the handler path, less its pattern if any, used to match this
+	 * request.
 	 * 
-	 * @return
+	 * @return the handler path used to match this request
 	 */
 	public String getServletPath() {
 		return this.servletPath;
