@@ -123,9 +123,10 @@ public class HttpHandler {
 		responseStr.append(recipientNetString);
 		responseStr.append(SPACE_CHAR);
 
+		response.transform();
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
-		out.write(response.formatBody());
+		out.write(response.getPayload());
 		out.close();
 
 		// send

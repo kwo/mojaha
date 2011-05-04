@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * @author Karl Ostendorf
  * 
  */
-public class HttpResponse {
+public class HttpResponse extends Response {
 
 	private static final String DEFAULT_REASON_PHRASE = "Undefined";
 	private static final String H_CONTENT_LENGTH = "Content-Length";
@@ -49,7 +49,6 @@ public class HttpResponse {
 	private final SimpleDateFormat df;
 	private final Map<String, String[]> headers;
 	private int statusCode = 0;
-
 	private String statusMessage = null;
 
 	public HttpResponse() {
@@ -77,64 +76,6 @@ public class HttpResponse {
 
 	public void addIntHeader(final String name, final int value) {
 		addHeader(name, Integer.toString(value));
-	}
-
-	/**
-	 * Format response body for sending to mongrel2.
-	 * 
-	 * @return byte array containing the response body
-	 * @throws IOException
-	 */
-	public byte[] formatBody() throws IOException {
-
-		final String LINE_TERMINATOR = "\r\n";
-		final char SPACE_CHAR = ' ';
-
-		final StringBuilder responseStr = new StringBuilder();
-
-		// body
-		responseStr.append("HTTP/1.1 ");
-		responseStr.append(getStatus());
-		responseStr.append(SPACE_CHAR);
-		responseStr.append(getStatusMessage());
-		responseStr.append(LINE_TERMINATOR);
-
-		// set content-length header
-		setIntHeader(H_CONTENT_LENGTH, getContent().length);
-
-		// get header names, sort list alphabetically
-		final List<String> headerNames = new ArrayList<String>();
-		for (final String headerName : getHeaderNames()) {
-			headerNames.add(headerName);
-		}
-		Collections.sort(headerNames);
-
-		// add date header
-		setTimestampHeader();
-		// add date header name to front of header name list
-		headerNames.add(0, H_DATE);
-
-		// headers
-		for (final String name : headerNames) {
-			for (final String value : getHeaderValues(name)) {
-				responseStr.append(name);
-				responseStr.append(": ");
-				responseStr.append(value);
-				responseStr.append(LINE_TERMINATOR);
-			}
-		}
-
-		responseStr.append(LINE_TERMINATOR);
-
-		final ByteArrayOutputStream out = new ByteArrayOutputStream();
-		out.write(responseStr.toString().getBytes("US-ASCII"));
-		if (getContent().length > 0) {
-			out.write(getContent());
-		}
-		out.close();
-
-		return out.toByteArray();
-
 	}
 
 	/**
@@ -269,23 +210,82 @@ public class HttpResponse {
 		this.statusMessage = sm;
 	}
 
-	boolean containsHeader(final String name) {
+	/**
+	 * Transform the headers, contents, etc of this HttpResponse and write them
+	 * to the payload of the superclass in preparation for sending to mongrel2.
+	 * The payload will be reset if this method is called multiple times.
+	 * 
+	 * @throws IOException
+	 */
+	public void transform() throws IOException {
+
+		final String LINE_TERMINATOR = "\r\n";
+		final char SPACE_CHAR = ' ';
+
+		final StringBuilder responseStr = new StringBuilder();
+
+		// body
+		responseStr.append("HTTP/1.1 ");
+		responseStr.append(getStatus());
+		responseStr.append(SPACE_CHAR);
+		responseStr.append(getStatusMessage());
+		responseStr.append(LINE_TERMINATOR);
+
+		// set content-length header
+		setIntHeader(H_CONTENT_LENGTH, getContent().length);
+
+		// get header names, sort list alphabetically
+		final List<String> headerNames = new ArrayList<String>();
+		for (final String headerName : getHeaderNames()) {
+			headerNames.add(headerName);
+		}
+		Collections.sort(headerNames);
+
+		// add date header
+		setTimestampHeader();
+		// add date header name to front of header name list
+		headerNames.add(0, H_DATE);
+
+		// headers
+		for (final String name : headerNames) {
+			for (final String value : getHeaderValues(name)) {
+				responseStr.append(name);
+				responseStr.append(": ");
+				responseStr.append(value);
+				responseStr.append(LINE_TERMINATOR);
+			}
+		}
+
+		responseStr.append(LINE_TERMINATOR);
+
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+		out.write(responseStr.toString().getBytes("US-ASCII"));
+		if (getContent().length > 0) {
+			out.write(getContent());
+		}
+		out.close();
+
+		setPayload(out.toByteArray());
+
+	}
+
+	protected boolean containsHeader(final String name) {
 		return this.headers.containsKey(name);
 	}
 
-	byte[] getContent() {
+	protected byte[] getContent() {
 		return this.content;
 	}
 
-	int getContentLength() {
+	protected int getContentLength() {
 		return getIntHeader(H_CONTENT_LENGTH);
 	}
 
-	String getContentType() {
+	protected String getContentType() {
 		return getHeader(H_CONTENT_TYPE);
 	}
 
-	long getDateHeader(final String name) {
+	protected long getDateHeader(final String name) {
 		if (!containsHeader(name))
 			return -1;
 		try {
@@ -295,40 +295,40 @@ public class HttpResponse {
 		}
 	}
 
-	String getHeader(final String name) {
+	protected String getHeader(final String name) {
 		final String key = name;
 		if (containsHeader(key))
 			return getHeaderValues(key)[0];
 		return null;
 	}
 
-	Iterable<String> getHeaderNames() {
+	protected Iterable<String> getHeaderNames() {
 		return this.headers.keySet();
 	}
 
-	String[] getHeaderValues(final String name) {
+	protected String[] getHeaderValues(final String name) {
 		return this.headers.get(name);
 	}
 
-	int getIntHeader(final String name) {
+	protected int getIntHeader(final String name) {
 		if (!containsHeader(name))
 			return -1;
 		return Integer.parseInt(getHeader(name));
 	}
 
-	int getStatus() {
+	protected int getStatus() {
 		return this.statusCode;
 	}
 
-	String getStatusMessage() {
+	protected String getStatusMessage() {
 		return this.statusMessage;
 	}
 
-	void setTimestampHeader() {
+	protected void setTimestampHeader() {
 		setTimestampHeader(System.currentTimeMillis());
 	}
 
-	void setTimestampHeader(final long time) {
+	protected void setTimestampHeader(final long time) {
 		setDateHeader(H_DATE, time);
 	}
 

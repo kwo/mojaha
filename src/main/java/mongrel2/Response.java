@@ -24,4 +24,14 @@ package mongrel2;
  */
 public class Response {
 
+	protected byte[] payload = new byte[0];
+
+	public void setPayload(final byte[] payload) {
+		this.payload = payload;
+	}
+
+	protected byte[] getPayload() {
+		return this.payload;
+	}
+
 }
