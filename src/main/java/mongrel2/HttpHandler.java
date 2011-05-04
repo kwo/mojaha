@@ -102,7 +102,9 @@ public class HttpHandler {
 	 * Retrieves the next Request, blocking.
 	 */
 	public HttpRequest recv() {
-		return HttpRequest.parse(this.requests.recv(0));
+		final HttpRequest req = new HttpRequest();
+		req.parse(this.requests.recv(0));
+		return req;
 	}
 
 	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {

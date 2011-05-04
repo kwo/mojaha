@@ -114,7 +114,8 @@ public class HttpRequestTest {
 	public void testParse() throws Exception {
 
 		final byte[] mongrel2RequestMessage = getResourceAsByteArray("/test-request.txt");
-		final HttpRequest req = HttpRequest.parse(mongrel2RequestMessage);
+		final HttpRequest req = new HttpRequest();
+		req.parse(mongrel2RequestMessage);
 
 		// ----- ATTRIBUTES -----
 
@@ -202,9 +203,8 @@ public class HttpRequestTest {
 		Assert.assertFalse(req.containsHeader("bogus-header-name"));
 		Assert.assertFalse(req.containsParameter("bogus-param-name"));
 
-		// TODO: case-insensetive header names
-		// Assert.assertEquals(req.getHeader("PATTERN"),
-		// req.getHeader("pattern"));
+		// case-insensetive header names
+		Assert.assertEquals(req.getHeader("PATTERN"), req.getHeader("pattern"));
 
 	}
 
