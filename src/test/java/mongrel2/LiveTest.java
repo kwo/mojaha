@@ -11,6 +11,8 @@ import java.util.UUID;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class LiveTest {
@@ -21,29 +23,43 @@ public class LiveTest {
 	// create tmp, run, logs
 	
 	private static final String CFG_FILE = "livetest.conf";
-
-	@Test
-	public void testMongrel2() throws Exception {
+	private static String m2sh = null;
+	private static File workdir = null;
+	
+	@BeforeClass
+	public static void setup() throws Exception {
 		
 		// find m2sh
-		String m2sh = findM2sh();
+		m2sh = findM2sh();
 		Assert.assertNotNull(m2sh);
 		
 		// create workdir
-		File workdir = createWorkingDirectory();
+		workdir = createWorkingDirectory();
 		Assert.assertTrue(workdir.exists());
 		Assert.assertTrue(workdir.isDirectory());
-		
-		// System.out.println(workdir.getPath());
 		
 		// shell to m2sh, load configuration
 		loadConfiguration(m2sh, workdir);
 		Assert.assertTrue(new File(workdir, "config.sqlite").exists());
 		
+		// TODO: start mongrel2
+		
+	}
+
+	@AfterClass
+	public static void teardown() throws Exception {
+		
+		// TODO: stop/kill mongrel
+		
 		// remove workdir
 		removeWorkingDirectory(workdir);
 		Assert.assertTrue(!workdir.exists());
 		
+	}
+
+	@Test
+	public void testMongrel2() throws Exception {
+		//Assert.fail(workdir.getPath());
 	}
 	
 	private static void loadConfiguration(String m2sh, File workdir) throws Exception {
