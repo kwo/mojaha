@@ -1,13 +1,21 @@
 package mongrel2;
 
-import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import junit.framework.Assert;
 
@@ -18,7 +26,11 @@ import org.junit.Test;
 public class LiveTest {
 
 	private static final String CFG_FILE = "livetest.conf";
+	private static ExecutorService executor = null;
 	private static String m2sh = null;
+	private static final String RECV_ADDR = "tcp://127.0.0.1:22201";
+	private static final String SEND_ADDR = "tcp://127.0.0.1:22202";
+	private static Process server = null;
 	private static File workdir = null;
 
 	@BeforeClass
@@ -33,18 +45,26 @@ public class LiveTest {
 		Assert.assertTrue(workdir.exists());
 		Assert.assertTrue(workdir.isDirectory());
 
+		executor = Executors.newCachedThreadPool();
+
 		// shell to m2sh, load configuration
 		loadConfiguration(m2sh, workdir);
-		Assert.assertTrue(new File(workdir, "config.sqlite").exists());
+		final File cfg = new File(workdir, "config.sqlite");
+		Assert.assertTrue(cfg.exists());
+		Assert.assertTrue("zero-length db", cfg.length() > 0);
 
-		// TODO: start mongrel2
+		serverStart(m2sh, workdir);
 
 	}
 
 	@AfterClass
 	public static void teardown() throws Exception {
 
-		// TODO: stop/kill mongrel
+		serverStop(m2sh, workdir);
+
+		if (executor != null)
+			executor.shutdownNow();
+		executor = null;
 
 		// remove workdir
 		removeWorkingDirectory(workdir);
@@ -72,18 +92,10 @@ public class LiveTest {
 
 	}
 
-	private static void extractConfiguration(final File target) throws Exception {
-
-		final OutputStream out = new BufferedOutputStream(new FileOutputStream(target));
-		final InputStream in = LiveTest.class.getResourceAsStream(CFG_FILE);
-
-		int len = 0;
-		final byte[] buf = new byte[256];
-		while ((len = in.read(buf)) > -1)
-			out.write(buf, 0, len);
+	private static void extractConfiguration(final File target) throws IOException {
+		final OutputStream out = new FileOutputStream(target);
+		out.write(readInputStream(LiveTest.class.getResourceAsStream(CFG_FILE)));
 		out.close();
-		in.close();
-
 	}
 
 	private static String findM2sh() throws Exception {
@@ -122,6 +134,9 @@ public class LiveTest {
 		final Process p = Runtime.getRuntime().exec(
 				new String[] { m2sh, "load", "--db", "config.sqlite", "--config", CFG_FILE }, new String[0], workdir);
 
+		final Future<?> stderr = executor.submit(new StreamMonitor(p.getErrorStream()));
+		final Future<?> stdout = executor.submit(new StreamMonitor(p.getInputStream()));
+
 		while (true) {
 			try {
 				Thread.sleep(500);
@@ -132,7 +147,26 @@ public class LiveTest {
 			}
 		}
 
+		stderr.cancel(true);
+		stdout.cancel(true);
+
 		Assert.assertEquals(0, p.exitValue());
+
+	}
+
+	private static byte[] readInputStream(final InputStream in) throws IOException {
+
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+		int len = 0;
+		final byte[] buf = new byte[256];
+		while ((len = in.read(buf)) > -1)
+			out.write(buf, 0, len);
+		out.close();
+		in.close();
+
+		return out.toByteArray();
+
 	}
 
 	private static void removeDirectory(final File target) {
@@ -151,9 +185,99 @@ public class LiveTest {
 		removeDirectory(dir);
 	}
 
+	private static void serverStart(final String m2sh, final File workdir) throws Exception {
+
+		server = Runtime.getRuntime().exec(new String[] { m2sh, "start", "--name", "test" }, new String[0], workdir);
+		Assert.assertNotNull(server);
+
+		executor.execute(new StreamMonitor(server.getErrorStream()));
+		executor.execute(new StreamMonitor(server.getInputStream()));
+
+		// System.out.printf("Server running in: %s%n", workdir.getPath());
+
+		Thread.sleep(500);
+
+		final File pidFile = new File(workdir, "run" + File.separator + "mongrel2.pid");
+		Assert.assertNotNull(pidFile);
+		Assert.assertTrue("pid file does not exist", pidFile.exists());
+
+		// final String pid = new String(readFile(pidFile));
+		// System.out.printf("Server running with pid: %s%n", pid);
+
+	}
+
+	private static void serverStop(final String m2sh, final File workdir) throws Exception {
+		if (server != null)
+			server.destroy();
+
+		server = null;
+	}
+
 	@Test
 	public void testMongrel2() throws Exception {
-		// Assert.fail(workdir.getPath());
+
+		final HttpHandler handler = new HttpHandler(UUID.randomUUID().toString(), RECV_ADDR, SEND_ADDR);
+		handler.setRunning(true);
+
+		final Runnable app = new Runnable() {
+			@Override
+			public void run() {
+
+				while (handler.isRunning()) {
+					try {
+						final HttpRequest req = handler.recv();
+						final HttpResponse rsp = new HttpResponse();
+						rsp.setContent("Hello, world!\n");
+						rsp.setStatus(HttpStatus.OK);
+						handler.send(rsp, req);
+					} catch (final IOException x) {
+						Assert.fail(x.toString());
+					}
+				} // while
+
+			}
+		};
+
+		executor.submit(app);
+
+		final URL u = new URL("http://localhost:6767/");
+		final HttpURLConnection http = (HttpURLConnection) u.openConnection();
+		Assert.assertEquals(200, http.getResponseCode());
+
+		handler.setRunning(false);
+
+	}
+
+}
+
+class StreamMonitor implements Runnable {
+
+	private final BufferedReader in;
+
+	StreamMonitor(final InputStream in) {
+		this.in = new BufferedReader(new InputStreamReader(in));
+	}
+
+	@Override
+	public void run() {
+
+		try {
+			String line = null;
+			while ((line = this.in.readLine()) != null) {
+				if (line.startsWith("[ERROR]"))
+					System.out.println(line);
+			}
+		} catch (final IOException x) {
+			// ignore
+		} finally {
+			try {
+				if (this.in != null)
+					this.in.close();
+			} catch (final IOException x) {
+				// ignore
+			}
+		}
+
 	}
 
 }
