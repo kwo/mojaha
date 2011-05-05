@@ -19,6 +19,7 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponse extends Response {
 
+	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final String DEFAULT_REASON_PHRASE = "Undefined";
 	private static final String H_CONTENT_LENGTH = "Content-Length";
 	private static final String H_CONTENT_TYPE = "Content-Type";
@@ -259,7 +261,7 @@ public class HttpResponse extends Response {
 		responseStr.append(LINE_TERMINATOR);
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
-		out.write(responseStr.toString().getBytes("US-ASCII"));
+		out.write(responseStr.toString().getBytes(ASCII));
 		if (getContent().length > 0) {
 			out.write(getContent());
 		}
