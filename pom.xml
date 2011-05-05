@@ -4,12 +4,12 @@
 
 	<groupId>com.ostendorf</groupId>
 	<artifactId>mojaha</artifactId>
-	<version>0.1.1-SNAPSHOT</version>
+	<version>0.1.2</version>
 	<packaging>jar</packaging>
 
 	<name>mojaha</name>
 	<description>Mongrel2 Java Handler</description>
-	<url>http://karl.ostendorf.com/</url>
+	<url>http://ostendorf.com/mojaha/</url>
 
 	<licenses>
 		<license>
@@ -22,7 +22,7 @@
 			<id>kwo</id>
 			<name>Karl Ostendorf</name>
 			<email>karl@ostendorf.com</email>
-			<url>http://karl.ostendorf.com/</url>
+			<url>http://ostendorf.com/</url>
 			<timezone>+1</timezone>
 		</developer>
 	</developers>
