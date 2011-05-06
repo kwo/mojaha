@@ -61,12 +61,13 @@ public class HttpHandler {
 
 	}
 
-	private final ZMQ.Context context;
+	private ZMQ.Context context = null;
 	private final String recvAddr;
-	private final ZMQ.Socket requests;
-	private final ZMQ.Socket responses;
+	private ZMQ.Socket requests = null;
+	private ZMQ.Socket responses = null;
 	private final AtomicBoolean running;
 	private final String sendAddr;
+	private final String senderId;
 
 	/**
 	 * Construct a new handler to communicate with Mongrel2.
@@ -81,17 +82,10 @@ public class HttpHandler {
 	 *            same as the recv_spec in the mongrel2 handler configuration.
 	 */
 	public HttpHandler(final String senderId, final String recvAddr, final String sendAddr) {
-
-		this.running = new AtomicBoolean();
-
-		this.context = ZMQ.context(1);
-		this.requests = this.context.socket(ZMQ.PULL);
-		this.responses = this.context.socket(ZMQ.PUB);
-		this.responses.setIdentity(senderId.getBytes());
-
+		this.senderId = senderId;
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
-
+		this.running = new AtomicBoolean();
 	}
 
 	public boolean isRunning() {
@@ -140,22 +134,24 @@ public class HttpHandler {
 
 		if (running && !wasRunning) {
 
-			// start up
+			// initialize
+			this.context = ZMQ.context(1);
+			this.requests = this.context.socket(ZMQ.PULL);
+			this.responses = this.context.socket(ZMQ.PUB);
+			this.responses.setIdentity(this.senderId.getBytes());
 			this.requests.connect(this.recvAddr);
 			this.responses.connect(this.sendAddr);
 
 		} else if (!running && wasRunning) {
+
 			// shutdown
-			try {
-				this.requests.close();
-			} catch (final Exception x) {
-				// ignore
-			}
-			try {
-				this.responses.close();
-			} catch (final Exception x) {
-				// ignore
-			}
+			this.requests.close();
+			this.requests = null;
+			this.responses.close();
+			this.responses = null;
+			this.context.term();
+			this.context = null;
+
 		}
 
 	}
