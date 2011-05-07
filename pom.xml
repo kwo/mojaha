@@ -39,6 +39,7 @@
 
 		<json.version>20090211</json.version>
 		<junit.version>4.8.2</junit.version>
+		<jnazmq.version>0.1-SNAPSHOT</jnazmq.version>
 		<jzmq.version>2.1.0-SNAPSHOT</jzmq.version>
 
 	</properties>
