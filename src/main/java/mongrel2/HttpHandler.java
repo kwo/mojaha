@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.zeromq.ZMQ;
+import org.zeromq.Zmq;
+import org.zeromq.ZmqContext;
+import org.zeromq.ZmqSocket;
+import org.zeromq.ZmqSocket.Type;
 
 /**
  * A Handler for the Mongrel 2 web server. The handler connects to Mongrel2's
@@ -61,10 +64,10 @@ public class HttpHandler {
 
 	}
 
-	private ZMQ.Context context = null;
+	private ZmqContext context = null;
 	private final String recvAddr;
-	private ZMQ.Socket requests = null;
-	private ZMQ.Socket responses = null;
+	private ZmqSocket requests = null;
+	private ZmqSocket responses = null;
 	private final AtomicBoolean running;
 	private final String sendAddr;
 	private final String senderId;
@@ -97,7 +100,7 @@ public class HttpHandler {
 	 */
 	public HttpRequest recv() {
 		final HttpRequest req = new HttpRequest();
-		req.parse(this.requests.recv(0));
+		req.parse(this.requests.recv());
 		return req;
 	}
 
@@ -124,7 +127,7 @@ public class HttpHandler {
 		out.close();
 
 		// send
-		this.responses.send(out.toByteArray(), 0);
+		this.responses.send(out.toByteArray());
 
 	}
 
@@ -135,10 +138,10 @@ public class HttpHandler {
 		if (running && !wasRunning) {
 
 			// initialize
-			this.context = ZMQ.context(1);
-			this.requests = this.context.socket(ZMQ.PULL);
+			this.context = Zmq.getContext(1);
+			this.requests = this.context.getSocket(Type.PULL);
 			// this.requests.setLinger(0);
-			this.responses = this.context.socket(ZMQ.PUB);
+			this.responses = this.context.getSocket(Type.PUB);
 			this.responses.setIdentity(this.senderId.getBytes());
 			// this.responses.setLinger(0);
 			this.requests.connect(this.recvAddr);

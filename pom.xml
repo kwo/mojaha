@@ -47,8 +47,8 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.zeromq</groupId>
-			<artifactId>jzmq</artifactId>
-			<version>${jzmq.version}</version>
+			<artifactId>jnazmq</artifactId>
+			<version>${jnazmq.version}</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
