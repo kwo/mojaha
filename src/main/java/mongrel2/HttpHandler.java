@@ -137,8 +137,10 @@ public class HttpHandler {
 			// initialize
 			this.context = ZMQ.context(1);
 			this.requests = this.context.socket(ZMQ.PULL);
+			// this.requests.setLinger(0);
 			this.responses = this.context.socket(ZMQ.PUB);
 			this.responses.setIdentity(this.senderId.getBytes());
+			// this.responses.setLinger(0);
 			this.requests.connect(this.recvAddr);
 			this.responses.connect(this.sendAddr);
 
