@@ -73,7 +73,7 @@ public class TestApp implements Runnable {
 				rsp.setHeader("X-Sender-Id", this.senderId);
 				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
 
-				this.handler.send(rsp, req);
+				this.handler.sendResponse(rsp, req);
 
 			} catch (final IOException x) {
 				x.printStackTrace();

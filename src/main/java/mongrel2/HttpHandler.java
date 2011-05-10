@@ -19,6 +19,7 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.zeromq.ZMQ;
@@ -114,7 +115,32 @@ public class HttpHandler {
 		}
 	}
 
-	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {
+	/**
+	 * Send a response to one or more requests. Convenience method for the
+	 * sendResponse(HttpResponse, HttpRequest[]) method.
+	 * 
+	 * @param response
+	 *            the response to send
+	 * @param recipients
+	 *            one or more requests to receive the response.
+	 * @throws IOException
+	 */
+	public void sendResponse(final HttpResponse response, final Collection<HttpRequest> recipients) throws IOException {
+		final HttpRequest[] r = new HttpRequest[recipients.size()];
+		recipients.toArray(r);
+		sendResponse(response, r);
+	}
+
+	/**
+	 * Send a response to one or more requests.
+	 * 
+	 * @param response
+	 *            the response to send
+	 * @param recipients
+	 *            one or more requests to receive the response.
+	 * @throws IOException
+	 */
+	public void sendResponse(final HttpResponse response, final HttpRequest... recipients) throws IOException {
 
 		if (recipients == null || recipients.length == 0)
 			throw new IllegalArgumentException();
