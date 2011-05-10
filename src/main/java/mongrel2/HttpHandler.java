@@ -105,14 +105,12 @@ public class HttpHandler {
 	 * @return the next HTTP request or null if none available
 	 */
 	public HttpRequest pollRequest() {
-		try {
-			final byte[] data = this.requests.recv(ZMQ.NOBLOCK);
-			final HttpRequest req = new HttpRequest();
-			req.parse(data);
-			return req;
-		} catch (final Exception x) {
+		final byte[] data = this.requests.recv(ZMQ.NOBLOCK);
+		if (data == null)
 			return null;
-		}
+		final HttpRequest req = new HttpRequest();
+		req.parse(data);
+		return req;
 	}
 
 	/**
