@@ -17,7 +17,7 @@
 package mongrel2;
 
 /**
- * Generic response to send to mongrel2.
+ * Generic response to send to Mongrel2.
  * 
  * @author Karl Ostendorf
  * 

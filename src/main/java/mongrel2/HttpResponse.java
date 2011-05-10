@@ -16,16 +16,10 @@
 
 package mongrel2;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +33,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponse extends Response {
 
-	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final String DEFAULT_REASON_PHRASE = "Undefined";
 	private static final String H_CONTENT_LENGTH = "Content-Length";
 	private static final String H_CONTENT_TYPE = "Content-Type";
@@ -210,65 +203,6 @@ public class HttpResponse extends Response {
 	public void setStatus(final int sc, final String sm) {
 		this.statusCode = sc;
 		this.statusMessage = sm;
-	}
-
-	/**
-	 * Transform the headers, contents, etc of this HttpResponse and write them
-	 * to the payload of the superclass in preparation for sending to mongrel2.
-	 * The payload will be reset if this method is called multiple times.
-	 * 
-	 * @throws IOException
-	 */
-	public void transform() throws IOException {
-
-		final String LINE_TERMINATOR = "\r\n";
-		final char SPACE_CHAR = ' ';
-
-		final StringBuilder responseStr = new StringBuilder();
-
-		// body
-		responseStr.append("HTTP/1.1 ");
-		responseStr.append(getStatus());
-		responseStr.append(SPACE_CHAR);
-		responseStr.append(getStatusMessage());
-		responseStr.append(LINE_TERMINATOR);
-
-		// set content-length header
-		setIntHeader(H_CONTENT_LENGTH, getContent().length);
-
-		// get header names, sort list alphabetically
-		final List<String> headerNames = new ArrayList<String>();
-		for (final String headerName : getHeaderNames()) {
-			headerNames.add(headerName);
-		}
-		Collections.sort(headerNames);
-
-		// add date header
-		setTimestampHeader();
-		// add date header name to front of header name list
-		headerNames.add(0, H_DATE);
-
-		// headers
-		for (final String name : headerNames) {
-			for (final String value : getHeaderValues(name)) {
-				responseStr.append(name);
-				responseStr.append(": ");
-				responseStr.append(value);
-				responseStr.append(LINE_TERMINATOR);
-			}
-		}
-
-		responseStr.append(LINE_TERMINATOR);
-
-		final ByteArrayOutputStream out = new ByteArrayOutputStream();
-		out.write(responseStr.toString().getBytes(ASCII));
-		if (getContent().length > 0) {
-			out.write(getContent());
-		}
-		out.close();
-
-		setPayload(out.toByteArray());
-
 	}
 
 	protected boolean containsHeader(final String name) {

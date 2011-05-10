@@ -19,7 +19,11 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.zeromq.ZMQ;
@@ -34,7 +38,76 @@ import org.zeromq.ZMQ;
  */
 public class HttpHandler {
 
+	/**
+	 * Standard ResponseTransformer that than converts the headers, contents,
+	 * etc of the HttpResponse into a byte array that is the pure http response
+	 * and writes it to the underlying Response's payload.
+	 * 
+	 */
+	public class StandardTransformer implements ResponseTransformer {
+
+		@Override
+		public void transform(final Response response) throws IOException {
+
+			System.out.println("std");
+
+			final HttpResponse rsp = (HttpResponse) response;
+
+			final String LINE_TERMINATOR = "\r\n";
+			final char SPACE_CHAR = ' ';
+
+			final StringBuilder responseStr = new StringBuilder();
+
+			// body
+			responseStr.append("HTTP/1.1 ");
+			responseStr.append(rsp.getStatus());
+			responseStr.append(SPACE_CHAR);
+			responseStr.append(rsp.getStatusMessage());
+			responseStr.append(LINE_TERMINATOR);
+
+			// set content-length header
+			rsp.setIntHeader(H_CONTENT_LENGTH, rsp.getContent().length);
+
+			// get header names, sort list alphabetically
+			final List<String> headerNames = new ArrayList<String>();
+			for (final String headerName : rsp.getHeaderNames()) {
+				headerNames.add(headerName);
+			}
+			Collections.sort(headerNames);
+
+			// add date header
+			rsp.setTimestampHeader();
+			// add date header name to front of header name list
+			headerNames.add(0, H_DATE);
+
+			// headers
+			for (final String name : headerNames) {
+				for (final String value : rsp.getHeaderValues(name)) {
+					responseStr.append(name);
+					responseStr.append(": ");
+					responseStr.append(value);
+					responseStr.append(LINE_TERMINATOR);
+				}
+			}
+
+			responseStr.append(LINE_TERMINATOR);
+
+			final ByteArrayOutputStream out = new ByteArrayOutputStream();
+			out.write(responseStr.toString().getBytes(ASCII));
+			if (rsp.getContent().length > 0) {
+				out.write(rsp.getContent());
+			}
+			out.close();
+
+			rsp.setPayload(out.toByteArray());
+
+		}
+
+	}
+
 	private static final Charset ASCII = Charset.forName("US-ASCII");
+	private static final String H_CONTENT_LENGTH = "Content-Length";
+	private static final String H_DATE = "Date";
 	private static final char SPACE_CHAR = ' ';
 
 	static String formatNetString(final HttpRequest[] requests) {
@@ -69,6 +142,7 @@ public class HttpHandler {
 	private ZMQ.Socket responses = null;
 	private final String sendAddr;
 	private final String senderId;
+	private final Collection<ResponseTransformer> transformers;
 
 	/**
 	 * Construct a new handler to communicate with Mongrel2.
@@ -87,6 +161,18 @@ public class HttpHandler {
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
 		this.active = new AtomicBoolean();
+		this.transformers = new CopyOnWriteArrayList<ResponseTransformer>();
+		this.transformers.add(new StandardTransformer());
+	}
+
+	/**
+	 * Add a transformer to manipulate a response before it is sent.
+	 * 
+	 * @param t
+	 *            transformer
+	 */
+	public void addTransformer(final ResponseTransformer t) {
+		this.transformers.add(t);
 	}
 
 	/**
@@ -111,6 +197,17 @@ public class HttpHandler {
 		final HttpRequest req = new HttpRequest();
 		req.parse(data);
 		return req;
+	}
+
+	/**
+	 * Remove a transformer from the list of transformers to be called before
+	 * sending a response.
+	 * 
+	 * @param t
+	 *            transformer
+	 */
+	public void removeTransformer(final ResponseTransformer t) {
+		this.transformers.remove(t);
 	}
 
 	/**
@@ -154,7 +251,11 @@ public class HttpHandler {
 		responseStr.append(recipientNetString);
 		responseStr.append(SPACE_CHAR);
 
-		response.transform();
+		// transform response
+		for (final ResponseTransformer t : this.transformers) {
+			t.transform(response);
+		}
+
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
 		out.write(response.getPayload());
