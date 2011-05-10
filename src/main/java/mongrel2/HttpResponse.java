@@ -129,7 +129,11 @@ public class HttpResponse extends Response {
 		setExpires(value, unit, System.currentTimeMillis());
 	}
 
-	public void setExpires(final int value, final TimeUnit unit, final long startTime) {
+	public void setExpires(final long date) {
+		setDateHeader(H_EXPIRES, date);
+	}
+
+	public void setExpires(final long value, final TimeUnit unit, final long startTime) {
 
 		long time = startTime;
 
@@ -158,10 +162,6 @@ public class HttpResponse extends Response {
 
 		setExpires(time);
 
-	}
-
-	public void setExpires(final long date) {
-		setDateHeader(H_EXPIRES, date);
 	}
 
 	public void setHeader(final String name, final String value) {
