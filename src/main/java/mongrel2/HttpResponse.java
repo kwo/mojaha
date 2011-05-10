@@ -193,11 +193,11 @@ public class HttpResponse extends Response {
 	 * @param statusCode
 	 */
 	public void setStatus(final int statusCode) {
-		final HttpStatus status = HttpStatus.findByCode(statusCode);
-		if (status == null) {
-			setStatus(statusCode, DEFAULT_REASON_PHRASE);
-		} else {
+		try {
+			final HttpStatus status = HttpStatus.findByCode(statusCode);
 			setStatus(statusCode, status.msg);
+		} catch (final IllegalArgumentException x) {
+			setStatus(statusCode, DEFAULT_REASON_PHRASE);
 		}
 	}
 
