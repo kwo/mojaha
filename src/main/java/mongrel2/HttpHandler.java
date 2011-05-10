@@ -61,11 +61,11 @@ public class HttpHandler {
 
 	}
 
+	private final AtomicBoolean active;
 	private ZMQ.Context context = null;
 	private final String recvAddr;
 	private ZMQ.Socket requests = null;
 	private ZMQ.Socket responses = null;
-	private final AtomicBoolean running;
 	private final String sendAddr;
 	private final String senderId;
 
@@ -85,11 +85,16 @@ public class HttpHandler {
 		this.senderId = senderId;
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
-		this.running = new AtomicBoolean();
+		this.active = new AtomicBoolean();
 	}
 
-	public boolean isRunning() {
-		return this.running.get();
+	/**
+	 * Returns if this handler is connected to Mongrel2.
+	 * 
+	 * @return true if connected, otherwise, false.
+	 */
+	public boolean isActive() {
+		return this.active.get();
 	}
 
 	/**
@@ -128,11 +133,20 @@ public class HttpHandler {
 
 	}
 
-	public void setRunning(final boolean running) {
+	/**
+	 * Sets this handler active or inactive. When switching from inactive to
+	 * active the necessary ZeroMQ connections will be opened to receive
+	 * requests and be able to send responses to Mongrel2. When switching from
+	 * active to inactive, all connections and resources are closed.
+	 * 
+	 * @param active
+	 *            true to activate, otherwise, false
+	 */
+	public void setActive(final boolean active) {
 
-		final boolean wasRunning = this.running.getAndSet(running);
+		final boolean wasActive = this.active.getAndSet(active);
 
-		if (running && !wasRunning) {
+		if (active && !wasActive) {
 
 			// initialize
 			this.context = ZMQ.context(1);
@@ -144,7 +158,7 @@ public class HttpHandler {
 			this.requests.connect(this.recvAddr);
 			this.responses.connect(this.sendAddr);
 
-		} else if (!running && wasRunning) {
+		} else if (!active && wasActive) {
 
 			// shutdown
 			this.requests.close();

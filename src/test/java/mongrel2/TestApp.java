@@ -28,7 +28,7 @@ public class TestApp implements Runnable {
 				System.out.println();
 				System.out.println("Signal caught, exiting ...");
 				for (final TestApp app : apps)
-					app.handler.setRunning(false);
+					app.handler.setActive(false);
 				exec.shutdownNow();
 			}
 		});
@@ -51,11 +51,11 @@ public class TestApp implements Runnable {
 	@Override
 	public void run() {
 
-		this.handler.setRunning(true);
+		this.handler.setActive(true);
 
 		System.out.printf("Started handler with sender id: %s%n", this.senderId);
 
-		while (this.handler.isRunning()) {
+		while (this.handler.isActive()) {
 
 			try {
 
