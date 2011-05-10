@@ -7,8 +7,8 @@ It aims for similarity but not compatibility with the Servlet API while also sup
 ## Example
 ```java
 HttpHandler handler = new HttpHandler(SENDER_ID, RECV_ADDR, SEND_ADDR);
-handler.setRunning(true);
-while (handler.isRunning()) {
+handler.setActive(true);
+while (handler.isActive()) {
 	HttpRequest req = handler.takeRequest();
 	HttpResponse rsp = new HttpResponse();
 	rsp.setContent("Hello, world!\n");
