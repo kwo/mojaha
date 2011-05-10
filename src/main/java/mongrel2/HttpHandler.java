@@ -49,8 +49,6 @@ public class HttpHandler {
 		@Override
 		public void transform(final Response response) throws IOException {
 
-			System.out.println("std");
-
 			final HttpResponse rsp = (HttpResponse) response;
 
 			final String LINE_TERMINATOR = "\r\n";
@@ -142,7 +140,7 @@ public class HttpHandler {
 	private ZMQ.Socket responses = null;
 	private final String sendAddr;
 	private final String senderId;
-	private final Collection<ResponseTransformer> transformers;
+	private final List<ResponseTransformer> transformers;
 
 	/**
 	 * Construct a new handler to communicate with Mongrel2.
@@ -172,7 +170,7 @@ public class HttpHandler {
 	 *            transformer
 	 */
 	public void addTransformer(final ResponseTransformer t) {
-		this.transformers.add(t);
+		this.transformers.add(0, t);
 	}
 
 	/**

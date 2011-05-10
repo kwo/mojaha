@@ -9,6 +9,13 @@ import org.junit.Test;
 public class HttpHandlerTest {
 
 	@Test
+	public void testActivate() throws Exception {
+		final HttpHandler handler = new HttpHandler("test-sender", "ipc://requests", "ipc://responses");
+		handler.setActive(true);
+		handler.setActive(false);
+	}
+
+	@Test
 	public void testTranaformerExecutionOrder() throws Exception {
 
 		final HttpHandler handler = new HttpHandler("test-sender", "ipc://requests", "ipc://responses");
@@ -20,7 +27,6 @@ public class HttpHandlerTest {
 			@Override
 			public void transform(final Response rsp) throws IOException {
 				results[index.getAndIncrement()] = "t1";
-				System.out.println("t1");
 			}
 		};
 
@@ -28,7 +34,6 @@ public class HttpHandlerTest {
 			@Override
 			public void transform(final Response rsp) throws IOException {
 				results[index.getAndIncrement()] = "t2";
-				System.out.println("t2");
 			}
 		};
 
