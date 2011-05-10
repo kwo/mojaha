@@ -98,12 +98,20 @@ public class HttpHandler {
 	}
 
 	/**
-	 * Retrieves the next Request, blocking.
+	 * Returns the next HTTP request from Mongrel2 or null if none are
+	 * available.
+	 * 
+	 * @return the next HTTP request or null if none available
 	 */
-	public HttpRequest recv() {
-		final HttpRequest req = new HttpRequest();
-		req.parse(this.requests.recv(0));
-		return req;
+	public HttpRequest pollRequest() {
+		try {
+			final byte[] data = this.requests.recv(ZMQ.NOBLOCK);
+			final HttpRequest req = new HttpRequest();
+			req.parse(data);
+			return req;
+		} catch (final Exception x) {
+			return null;
+		}
 	}
 
 	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {
@@ -170,6 +178,17 @@ public class HttpHandler {
 
 		}
 
+	}
+
+	/**
+	 * Returns the next HTTP request from Mongrel2, blocking until one arrives.
+	 * 
+	 * @return next HTTP request
+	 */
+	public HttpRequest takeRequest() {
+		final HttpRequest req = new HttpRequest();
+		req.parse(this.requests.recv(0));
+		return req;
 	}
 
 }

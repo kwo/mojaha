@@ -59,7 +59,7 @@ public class TestApp implements Runnable {
 
 			try {
 
-				final HttpRequest req = this.handler.recv();
+				final HttpRequest req = this.handler.takeRequest();
 
 				final long now = System.currentTimeMillis();
 				System.out.printf("%tH:%tM:%tS - %s %s%n", now, now, now, this.senderId, req.getRequestURL());
