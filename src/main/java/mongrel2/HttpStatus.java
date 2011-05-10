@@ -64,7 +64,7 @@ public enum HttpStatus {
 		for (final HttpStatus status : values())
 			if (code == status.code)
 				return status;
-		return null;
+		throw new IllegalArgumentException("Invalid HTTP status code: " + code);
 	}
 
 	public final int code;
