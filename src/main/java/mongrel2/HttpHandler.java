@@ -19,9 +19,7 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,23 +61,8 @@ public class HttpHandler {
 			responseStr.append(rsp.getStatusMessage());
 			responseStr.append(LINE_TERMINATOR);
 
-			// set content-length header
-			rsp.setIntHeader(H_CONTENT_LENGTH, rsp.getContent().length);
-
-			// get header names, sort list alphabetically
-			final List<String> headerNames = new ArrayList<String>();
-			for (final String headerName : rsp.getHeaderNames()) {
-				headerNames.add(headerName);
-			}
-			Collections.sort(headerNames);
-
-			// add date header
-			rsp.setTimestampHeader();
-			// add date header name to front of header name list
-			headerNames.add(0, H_DATE);
-
 			// headers
-			for (final String name : headerNames) {
+			for (final String name : rsp.getHeaderNames()) {
 				for (final String value : rsp.getHeaderValues(name)) {
 					responseStr.append(name);
 					responseStr.append(": ");
@@ -92,9 +75,8 @@ public class HttpHandler {
 
 			final ByteArrayOutputStream out = new ByteArrayOutputStream();
 			out.write(responseStr.toString().getBytes(ASCII));
-			if (rsp.getContent().length > 0) {
+			if (rsp.getContent().length > 0)
 				out.write(rsp.getContent());
-			}
 			out.close();
 
 			rsp.setPayload(out.toByteArray());
@@ -104,8 +86,6 @@ public class HttpHandler {
 	}
 
 	private static final Charset ASCII = Charset.forName("US-ASCII");
-	private static final String H_CONTENT_LENGTH = "Content-Length";
-	private static final String H_DATE = "Date";
 	private static final char SPACE_CHAR = ' ';
 
 	static String formatNetString(final HttpRequest[] requests) {

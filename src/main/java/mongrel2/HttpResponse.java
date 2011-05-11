@@ -34,11 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class HttpResponse extends Response {
 
 	private static final String DEFAULT_REASON_PHRASE = "Undefined";
-	private static final String H_CONTENT_LENGTH = "Content-Length";
-	private static final String H_CONTENT_TYPE = "Content-Type";
-	private static final String H_DATE = "Date";
-	private static final String H_EXPIRES = "Expires";
-	private static final String H_LAST_MODIFIED = "Last-Modified";
 
 	private byte[] content = new byte[0];
 	private final SimpleDateFormat df;
@@ -83,7 +78,7 @@ public class HttpResponse extends Response {
 
 		setContent(status.msg + "\n");
 		setHeader("Cache-Control", "no-cache");
-		setDateHeader(H_LAST_MODIFIED, System.currentTimeMillis());
+		setDateHeader(HttpHeader.LAST_MODIFIED, System.currentTimeMillis());
 
 	}
 
@@ -107,11 +102,11 @@ public class HttpResponse extends Response {
 	}
 
 	public void setContentLength(final int size) {
-		setIntHeader(H_CONTENT_LENGTH, size);
+		setIntHeader(HttpHeader.CONTENT_LENGTH, size);
 	}
 
 	public void setContentType(final String mimetype) {
-		setHeader(H_CONTENT_TYPE, mimetype);
+		setHeader(HttpHeader.CONTENT_TYPE, mimetype);
 	}
 
 	public void setDateHeader(final String name, final long date) {
@@ -123,7 +118,7 @@ public class HttpResponse extends Response {
 	}
 
 	public void setExpires(final long date) {
-		setDateHeader(H_EXPIRES, date);
+		setDateHeader(HttpHeader.EXPIRES, date);
 	}
 
 	public void setExpires(final long value, final TimeUnit unit, final long startTime) {
@@ -166,7 +161,7 @@ public class HttpResponse extends Response {
 	}
 
 	public void setLastModified(final long date) {
-		setDateHeader(H_LAST_MODIFIED, date);
+		setDateHeader(HttpHeader.LAST_MODIFIED, date);
 	}
 
 	/**
@@ -214,11 +209,11 @@ public class HttpResponse extends Response {
 	}
 
 	protected int getContentLength() {
-		return getIntHeader(H_CONTENT_LENGTH);
+		return getIntHeader(HttpHeader.CONTENT_LENGTH);
 	}
 
 	protected String getContentType() {
-		return getHeader(H_CONTENT_TYPE);
+		return getHeader(HttpHeader.CONTENT_TYPE);
 	}
 
 	protected long getDateHeader(final String name) {
@@ -265,7 +260,7 @@ public class HttpResponse extends Response {
 	}
 
 	protected void setTimestampHeader(final long time) {
-		setDateHeader(H_DATE, time);
+		setDateHeader(HttpHeader.DATE, time);
 	}
 
 }

@@ -46,6 +46,7 @@ public class TestApp implements Runnable {
 	public TestApp() {
 		this.senderId = UUID.randomUUID().toString();
 		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
+		this.handler.addHandlerListener(new NiceResponseListener());
 	}
 
 	@Override
