@@ -47,6 +47,7 @@ public class TestApp implements Runnable {
 		this.senderId = UUID.randomUUID().toString();
 		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
 		this.handler.addHandlerListener(new NiceResponseListener());
+		this.handler.addHandlerListener(new EtagListener(EtagListener.ALGO_SHA));
 	}
 
 	@Override
@@ -69,7 +70,7 @@ public class TestApp implements Runnable {
 				rsp.setContent("Hello, world!\n");
 				rsp.setStatus(HttpStatus.OK);
 				// rsp.setStatus(HttpStatus.BadRequest.code, "Nice Try");
-				rsp.setHeader("Cache-Control", "no-cache");
+				rsp.setHeader("Cache-Control", "public");
 				rsp.setHeader("X-Handler-App", "TestApp");
 				rsp.setHeader("X-Sender-Id", this.senderId);
 				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
