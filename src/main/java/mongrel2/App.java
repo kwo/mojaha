@@ -16,29 +16,26 @@
 
 package mongrel2;
 
-import java.io.IOException;
 
 /**
- * 
- * HandlerListeners extend the handler.
- * 
- * @see HttpHandler#addHandlerListener(HandlerListener)
- * @see HttpHandler#removeHandlerListener(HandlerListener)
+ * Simple App to display version information about Mojaha.
  * 
  * @author Karl Ostendorf
  * 
  */
-public interface HandlerListener {
+public class App {
 
-	/**
-	 * Called by the handler before sending a response.
-	 * 
-	 * @param rsp
-	 *            the response to be sent
-	 * 
-	 * @throws IOException
-	 * 
-	 */
-	void beforeSendResponse(Response rsp) throws IOException;
+	public static void main(final String[] args) throws Exception {
+
+		final Package p = App.class.getPackage();
+		final String appname = p.getSpecificationTitle();
+		final String versionMaven = p.getSpecificationVersion();
+		final String[] version = p.getImplementationVersion().split(" ", 2);
+
+		System.out.printf("%s version:      %s%n", appname, versionMaven);
+		System.out.printf("%s build time:   %s%n", appname, version[1]);
+		System.out.printf("%s build commit: %s%n", appname, version[0]);
+
+	}
 
 }
