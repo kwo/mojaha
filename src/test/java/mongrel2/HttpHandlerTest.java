@@ -23,22 +23,22 @@ public class HttpHandlerTest {
 		final AtomicInteger index = new AtomicInteger();
 		final String[] results = new String[2];
 
-		final ResponseTransformer t1 = new ResponseTransformer() {
+		final HandlerListener t1 = new HandlerListener() {
 			@Override
-			public void transform(final Response rsp) throws IOException {
+			public void beforeSendResponse(final Response rsp) throws IOException {
 				results[index.getAndIncrement()] = "t1";
 			}
 		};
 
-		final ResponseTransformer t2 = new ResponseTransformer() {
+		final HandlerListener t2 = new HandlerListener() {
 			@Override
-			public void transform(final Response rsp) throws IOException {
+			public void beforeSendResponse(final Response rsp) throws IOException {
 				results[index.getAndIncrement()] = "t2";
 			}
 		};
 
-		handler.addTransformer(t1);
-		handler.addTransformer(t2);
+		handler.addHandlerListener(t1);
+		handler.addHandlerListener(t2);
 
 		handler.setActive(true);
 

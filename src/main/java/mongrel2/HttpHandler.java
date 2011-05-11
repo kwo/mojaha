@@ -39,15 +39,15 @@ import org.zeromq.ZMQ;
 public class HttpHandler {
 
 	/**
-	 * Standard ResponseTransformer that than converts the headers, contents,
-	 * etc of the HttpResponse into a byte array that is the pure http response
-	 * and writes it to the underlying Response's payload.
+	 * Internal listener that than converts the headers, contents, etc of the
+	 * HttpResponse into a byte array that is the pure http response and writes
+	 * it to the underlying Response's payload.
 	 * 
 	 */
-	public class StandardTransformer implements ResponseTransformer {
+	public class InternalListener implements HandlerListener {
 
 		@Override
-		public void transform(final Response response) throws IOException {
+		public void beforeSendResponse(final Response response) throws IOException {
 
 			final HttpResponse rsp = (HttpResponse) response;
 
@@ -135,12 +135,12 @@ public class HttpHandler {
 
 	private final AtomicBoolean active;
 	private ZMQ.Context context = null;
+	private final List<HandlerListener> listeners;
 	private final String recvAddr;
 	private ZMQ.Socket requests = null;
 	private ZMQ.Socket responses = null;
 	private final String sendAddr;
 	private final String senderId;
-	private final List<ResponseTransformer> transformers;
 
 	/**
 	 * Construct a new handler to communicate with Mongrel2.
@@ -159,18 +159,20 @@ public class HttpHandler {
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
 		this.active = new AtomicBoolean();
-		this.transformers = new CopyOnWriteArrayList<ResponseTransformer>();
-		this.transformers.add(new StandardTransformer());
+		this.listeners = new CopyOnWriteArrayList<HandlerListener>();
+		this.listeners.add(new InternalListener());
 	}
 
 	/**
-	 * Add a transformer to manipulate a response before it is sent.
+	 * Add a handler listener. Note that listeners are executed in LIFO order
+	 * such that the last listeners added will be the first to be called in the
+	 * processing chains.
 	 * 
-	 * @param t
-	 *            transformer
+	 * @param l
+	 *            listener
 	 */
-	public void addTransformer(final ResponseTransformer t) {
-		this.transformers.add(0, t);
+	public void addHandlerListener(final HandlerListener l) {
+		this.listeners.add(0, l);;
 	}
 
 	/**
@@ -198,14 +200,13 @@ public class HttpHandler {
 	}
 
 	/**
-	 * Remove a transformer from the list of transformers to be called before
-	 * sending a response.
+	 * Remove a listener.
 	 * 
-	 * @param t
-	 *            transformer
+	 * @param l
+	 *            listener
 	 */
-	public void removeTransformer(final ResponseTransformer t) {
-		this.transformers.remove(t);
+	public void removeHandlerListener(final HandlerListener l) {
+		this.listeners.remove(l);
 	}
 
 	/**
@@ -250,8 +251,8 @@ public class HttpHandler {
 		responseStr.append(SPACE_CHAR);
 
 		// transform response
-		for (final ResponseTransformer t : this.transformers) {
-			t.transform(response);
+		for (final HandlerListener l : this.listeners) {
+			l.beforeSendResponse(response);
 		}
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
