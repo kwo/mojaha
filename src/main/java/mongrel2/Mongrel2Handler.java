@@ -20,8 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.zeromq.ZMQ;
@@ -34,61 +32,12 @@ import org.zeromq.ZMQ;
  * @author Karl Ostendorf
  * 
  */
-public class HttpHandler {
-
-	/**
-	 * Internal listener that than converts the headers, contents, etc of the
-	 * HttpResponse into a byte array that is the pure http response and writes
-	 * it to the underlying Response's payload.
-	 * 
-	 */
-	public class InternalListener implements HandlerListener {
-
-		@Override
-		public void beforeSendResponse(final Response response) throws IOException {
-
-			final HttpResponse rsp = (HttpResponse) response;
-
-			final String LINE_TERMINATOR = "\r\n";
-			final char SPACE_CHAR = ' ';
-
-			final StringBuilder responseStr = new StringBuilder();
-
-			// body
-			responseStr.append("HTTP/1.1 ");
-			responseStr.append(rsp.getStatus());
-			responseStr.append(SPACE_CHAR);
-			responseStr.append(rsp.getStatusMessage());
-			responseStr.append(LINE_TERMINATOR);
-
-			// headers
-			for (final String name : rsp.getHeaderNames()) {
-				for (final String value : rsp.getHeaderValues(name)) {
-					responseStr.append(name);
-					responseStr.append(": ");
-					responseStr.append(value);
-					responseStr.append(LINE_TERMINATOR);
-				}
-			}
-
-			responseStr.append(LINE_TERMINATOR);
-
-			final ByteArrayOutputStream out = new ByteArrayOutputStream();
-			out.write(responseStr.toString().getBytes(ASCII));
-			if (rsp.getContent().length > 0)
-				out.write(rsp.getContent());
-			out.close();
-
-			rsp.setPayload(out.toByteArray());
-
-		}
-
-	}
+public class Mongrel2Handler {
 
 	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final char SPACE_CHAR = ' ';
 
-	static String formatNetString(final HttpRequest[] requests) {
+	static String formatNetString(final Request[] requests) {
 		final String[] requestIds = new String[requests.length];
 		for (int i = 0; i < requests.length; i++)
 			requestIds[i] = requests[i].getRequestId();
@@ -115,11 +64,11 @@ public class HttpHandler {
 
 	private final AtomicBoolean active;
 	private ZMQ.Context context = null;
-	private final List<HandlerListener> listeners;
 	private final String recvAddr;
 	private ZMQ.Socket requests = null;
 	private ZMQ.Socket responses = null;
 	private final String sendAddr;
+
 	private final String senderId;
 
 	/**
@@ -134,25 +83,11 @@ public class HttpHandler {
 	 *            The socket on which the handler will publish messages. The
 	 *            same as the recv_spec in the mongrel2 handler configuration.
 	 */
-	public HttpHandler(final String senderId, final String recvAddr, final String sendAddr) {
+	public Mongrel2Handler(final String senderId, final String recvAddr, final String sendAddr) {
 		this.senderId = senderId;
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
 		this.active = new AtomicBoolean();
-		this.listeners = new CopyOnWriteArrayList<HandlerListener>();
-		this.listeners.add(new InternalListener());
-	}
-
-	/**
-	 * Add a handler listener. Note that listeners are executed in LIFO order
-	 * such that the last listeners added will be the first to be called in the
-	 * processing chains.
-	 * 
-	 * @param l
-	 *            listener
-	 */
-	public void addHandlerListener(final HandlerListener l) {
-		this.listeners.add(0, l);;
 	}
 
 	/**
@@ -165,33 +100,8 @@ public class HttpHandler {
 	}
 
 	/**
-	 * Returns the next HTTP request from Mongrel2 or null if none are
-	 * available.
-	 * 
-	 * @return the next HTTP request or null if none available
-	 */
-	public HttpRequest pollRequest() {
-		final byte[] data = this.requests.recv(ZMQ.NOBLOCK);
-		if (data == null)
-			return null;
-		final HttpRequest req = new HttpRequest();
-		req.parse(data);
-		return req;
-	}
-
-	/**
-	 * Remove a listener.
-	 * 
-	 * @param l
-	 *            listener
-	 */
-	public void removeHandlerListener(final HandlerListener l) {
-		this.listeners.remove(l);
-	}
-
-	/**
 	 * Send a response to one or more requests. Convenience method for the
-	 * sendResponse(HttpResponse, HttpRequest[]) method.
+	 * sendResponse(Response, Request[]) method.
 	 * 
 	 * @param response
 	 *            the response to send
@@ -199,8 +109,8 @@ public class HttpHandler {
 	 *            one or more requests to receive the response.
 	 * @throws IOException
 	 */
-	public void sendResponse(final HttpResponse response, final Collection<HttpRequest> recipients) throws IOException {
-		final HttpRequest[] r = new HttpRequest[recipients.size()];
+	public void sendResponse(final Response response, final Collection<Request> recipients) throws IOException {
+		final Request[] r = new Request[recipients.size()];
 		recipients.toArray(r);
 		sendResponse(response, r);
 	}
@@ -214,7 +124,7 @@ public class HttpHandler {
 	 *            one or more requests to receive the response.
 	 * @throws IOException
 	 */
-	public void sendResponse(final HttpResponse response, final HttpRequest... recipients) throws IOException {
+	public void sendResponse(final Response response, final Request... recipients) throws IOException {
 
 		if (recipients == null || recipients.length == 0)
 			throw new IllegalArgumentException();
@@ -230,10 +140,7 @@ public class HttpHandler {
 		responseStr.append(recipientNetString);
 		responseStr.append(SPACE_CHAR);
 
-		// transform response
-		for (final HandlerListener l : this.listeners) {
-			l.beforeSendResponse(response);
-		}
+		response.transform();
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
@@ -288,14 +195,12 @@ public class HttpHandler {
 	}
 
 	/**
-	 * Returns the next HTTP request from Mongrel2, blocking until one arrives.
+	 * Returns the next request from Mongrel2, blocking until one arrives.
 	 * 
 	 * @return next HTTP request
 	 */
-	public HttpRequest takeRequest() {
-		final HttpRequest req = new HttpRequest();
+	public void takeRequest(final Request req) {
 		req.parse(this.requests.recv(0));
-		return req;
 	}
 
 }

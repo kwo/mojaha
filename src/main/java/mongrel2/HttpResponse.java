@@ -16,7 +16,10 @@
 
 package mongrel2;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -33,7 +36,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponse extends Response {
 
+	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final String DEFAULT_REASON_PHRASE = "Undefined";
+	private static final String LINE_TERMINATOR = "\r\n";
+	private static final char SPACE_CHAR = ' ';
 
 	private byte[] content = new byte[0];
 	private final SimpleDateFormat df;
@@ -261,6 +267,47 @@ public class HttpResponse extends Response {
 
 	protected void setTimestampHeader(final long time) {
 		setDateHeader(HttpHeader.DATE, time);
+	}
+
+	/**
+	 * Converts the headers, contents, etc of the HttpResponse into the pure
+	 * http response and saves it to the payload.
+	 * 
+	 * @throws IOException
+	 * 
+	 */
+	@Override
+	protected void transform() throws IOException {
+
+		final StringBuilder responseStr = new StringBuilder();
+
+		// body
+		responseStr.append("HTTP/1.1 ");
+		responseStr.append(getStatus());
+		responseStr.append(SPACE_CHAR);
+		responseStr.append(getStatusMessage());
+		responseStr.append(LINE_TERMINATOR);
+
+		// headers
+		for (final String name : getHeaderNames()) {
+			for (final String value : getHeaderValues(name)) {
+				responseStr.append(name);
+				responseStr.append(": ");
+				responseStr.append(value);
+				responseStr.append(LINE_TERMINATOR);
+			}
+		}
+
+		responseStr.append(LINE_TERMINATOR);
+
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+		out.write(responseStr.toString().getBytes(ASCII));
+		if (getContent().length > 0)
+			out.write(getContent());
+		out.close();
+
+		setPayload(out.toByteArray());
+
 	}
 
 }

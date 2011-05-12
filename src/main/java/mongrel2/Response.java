@@ -16,6 +16,8 @@
 
 package mongrel2;
 
+import java.io.IOException;
+
 /**
  * Generic response to send to Mongrel2.
  * 
@@ -32,6 +34,14 @@ public class Response {
 
 	protected byte[] getPayload() {
 		return this.payload;
+	}
+
+	/**
+	 * Called before a response is dispatched back to Mongrel2.
+	 */
+	protected void transform() throws IOException {
+		// default implementation does nothing
+		// setPayload(getPayload());
 	}
 
 }

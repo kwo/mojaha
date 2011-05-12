@@ -46,14 +46,12 @@ public class TestApp implements Runnable {
 
 	}
 
-	private final HttpHandler handler;
+	private final Mongrel2Handler handler;
 	private final String senderId;
 
 	public TestApp(final String senderId) {
 		this.senderId = senderId;
-		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
-		this.handler.addHandlerListener(new NiceResponseListener());
-		this.handler.addHandlerListener(new EtagListener(EtagListener.ALGO_SHA));
+		this.handler = new Mongrel2Handler(this.senderId, RECV_ADDR, SEND_ADDR);
 	}
 
 	@Override
@@ -67,7 +65,8 @@ public class TestApp implements Runnable {
 
 			try {
 
-				final HttpRequest req = this.handler.takeRequest();
+				final HttpRequest req = new HttpRequest();
+				this.handler.takeRequest(req);
 
 				final long now = System.currentTimeMillis();
 				System.out.printf("%tH:%tM:%tS - %s %s%n", now, now, now, this.senderId, req.getRequestURL());
