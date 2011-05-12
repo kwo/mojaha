@@ -17,12 +17,18 @@ while (handler.isActive()) {
 	handler.sendResponse(rsp, req); // multiple requests may be given here
 }
 ```
+
+## Features
+ - Supports asynchronous HTTP.
+ - Supports listeners that can modify responses before being sent.
+ - The mojaha JAR itself is executable and will simply print out version information to the console.
+
 ## Requirements
  - Java 1.6 JDK
  - Maven 2 +
  - [jzmq](https://github.com/zeromq/jzmq): the Java bindings for [ZeroMQ](http://www.zeromq.org/).
-   As jzmq is not in the maven repositories, it will need to built and installed locally before compiling mojaha.
-   Additionally, jzmq includes a native library which must be built and installed locally as well as referenced
+   As jzmq is not in the maven repositories, it will need to be built and installed locally before compiling mojaha.
+   Additionally, jzmq includes a native library which must also be built and installed locally as well as referenced
    in the java.library.path at runtime.
 
 ## Building and Installing
@@ -49,7 +55,6 @@ When running your application with mojaha, the jzmq native library will need to 
 package mongrel2;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -61,14 +66,17 @@ public class TestApp implements Runnable {
 	// The socket on which the handler will send messages. The same as the
 	// recv_spec in the mongrel2 handler configuration.
 	private static final String SEND_ADDR = "tcp://localhost:44402";
-	private static final int THREADS = 3;
+
+	// sender ids should be persistent between runs
+	private static final String[] SENDERS = { "20ACBE50-DD9B-4704-9B98-F59DA590CD0E",
+			"AEE93C2D-863E-4ED6-9F2E-8FF30A2BAF04", "F87B7173-9072-4330-AE32-98A4EBBECE27" };
 
 	public static void main(final String[] args) throws Exception {
 
-		final ExecutorService exec = Executors.newFixedThreadPool(THREADS);
-		final TestApp[] apps = new TestApp[THREADS];
-		for (int i = 0; i < THREADS; i++)
-			apps[i] = new TestApp();
+		final ExecutorService exec = Executors.newFixedThreadPool(SENDERS.length);
+		final TestApp[] apps = new TestApp[SENDERS.length];
+		for (int i = 0; i < SENDERS.length; i++)
+			apps[i] = new TestApp(SENDERS[i]);
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
@@ -91,9 +99,11 @@ public class TestApp implements Runnable {
 	private final HttpHandler handler;
 	private final String senderId;
 
-	public TestApp() {
-		this.senderId = UUID.randomUUID().toString();
+	public TestApp(final String senderId) {
+		this.senderId = senderId;
 		this.handler = new HttpHandler(this.senderId, RECV_ADDR, SEND_ADDR);
+		this.handler.addHandlerListener(new NiceResponseListener());
+		this.handler.addHandlerListener(new EtagListener(EtagListener.ALGO_SHA));
 	}
 
 	@Override
@@ -116,7 +126,7 @@ public class TestApp implements Runnable {
 				rsp.setContent("Hello, world!\n");
 				rsp.setStatus(HttpStatus.OK);
 				// rsp.setStatus(HttpStatus.BadRequest.code, "Nice Try");
-				rsp.setHeader("Cache-Control", "no-cache");
+				rsp.setHeader("Cache-Control", "public");
 				rsp.setHeader("X-Handler-App", "TestApp");
 				rsp.setHeader("X-Sender-Id", this.senderId);
 				rsp.setDateHeader("Last-Updated", System.currentTimeMillis());
