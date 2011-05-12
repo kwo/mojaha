@@ -4,7 +4,7 @@
 
 	<groupId>com.ostendorf</groupId>
 	<artifactId>mojaha</artifactId>
-	<version>0.1.4-SNAPSHOT</version>
+	<version>0.1.4</version>
 	<packaging>jar</packaging>
 
 	<name>mojaha</name>
