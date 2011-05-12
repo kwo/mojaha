@@ -27,11 +27,15 @@ public class TestApp implements Runnable {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
+
 				System.out.println();
 				System.out.println("Signal caught, exiting ...");
+
 				for (final TestApp app : apps)
 					app.handler.setActive(false);
+
 				exec.shutdownNow();
+
 			}
 		});
 

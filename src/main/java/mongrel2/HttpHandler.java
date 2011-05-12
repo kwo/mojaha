@@ -277,7 +277,10 @@ public class HttpHandler {
 			this.requests = null;
 			this.responses.close();
 			this.responses = null;
-			this.context.term();
+			// Terminating the context causes apps to hang sometimes.
+			// Not terminating explicitly will cause the context to terminate
+			// when the object is garbage collected.
+			// this.context.term();
 			this.context = null;
 
 		}
