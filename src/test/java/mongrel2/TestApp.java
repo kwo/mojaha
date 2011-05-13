@@ -9,6 +9,7 @@ public class TestApp implements Runnable {
 	// The socket on which the handler will receive messages. The same as the
 	// send_spec in the mongrel2 handler configuration.
 	private static final String RECV_ADDR = "tcp://localhost:44401";
+
 	// The socket on which the handler will send messages. The same as the
 	// recv_spec in the mongrel2 handler configuration.
 	private static final String SEND_ADDR = "tcp://localhost:44402";
@@ -47,6 +48,7 @@ public class TestApp implements Runnable {
 	}
 
 	private final Mongrel2Handler handler;
+
 	private final String senderId;
 
 	public TestApp(final String senderId) {
@@ -91,4 +93,5 @@ public class TestApp implements Runnable {
 		System.out.printf("Exiting handler with sender id: %s%n", this.senderId);
 
 	}
+
 }

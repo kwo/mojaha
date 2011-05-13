@@ -21,7 +21,7 @@ public class HttpResponseTest {
 		cal.set(Calendar.SECOND, 30);
 		cal.set(Calendar.MILLISECOND, 0);
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 		rsp.setDateHeader("n1", cal.getTimeInMillis());
 		rsp.addDateHeader("n1", cal.getTimeInMillis());
 
@@ -34,7 +34,7 @@ public class HttpResponseTest {
 	@Test
 	public void testAddIntHeader() throws Exception {
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 		rsp.setIntHeader("n1", 1);
 		rsp.addIntHeader("n1", 2);
 
@@ -47,7 +47,7 @@ public class HttpResponseTest {
 	@Test
 	public void testContent() throws Exception {
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		final String msg = "test content";
 
@@ -69,7 +69,7 @@ public class HttpResponseTest {
 	@Test
 	public void testDate() throws Exception {
 
-		final HttpResponse rsp1 = new HttpResponse();
+		final BareHttpResponse rsp1 = new BareHttpResponse();
 		rsp1.setTimestampHeader();
 		Assert.assertTrue(rsp1.containsHeader("Date"));
 
@@ -83,7 +83,7 @@ public class HttpResponseTest {
 		cal.set(Calendar.SECOND, 30);
 		cal.set(Calendar.MILLISECOND, 0);
 
-		final HttpResponse rsp4 = new HttpResponse();
+		final BareHttpResponse rsp4 = new BareHttpResponse();
 		rsp4.setTimestampHeader(cal.getTime().getTime());
 		Assert.assertTrue(rsp4.containsHeader("Date"));
 		Assert.assertEquals("Mon, 25 Apr 2011 21:42:30 GMT", rsp4.getHeader("Date"));
@@ -104,7 +104,7 @@ public class HttpResponseTest {
 		cal.set(Calendar.SECOND, 30);
 		cal.set(Calendar.MILLISECOND, 0);
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		rsp.setExpires(cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Expires"));
@@ -130,14 +130,14 @@ public class HttpResponseTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testExpiresMilliseconds() {
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 		rsp.setExpires(0, TimeUnit.MILLISECONDS);
 	}
 
 	@Test
 	public void testHeaders() throws Exception {
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		// test setting a header
 		rsp.setHeader("h1", "v1");
@@ -201,7 +201,7 @@ public class HttpResponseTest {
 		cal.set(Calendar.SECOND, 30);
 		cal.set(Calendar.MILLISECOND, 0);
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		rsp.setLastModified(cal.getTime().getTime());
 		Assert.assertTrue(rsp.containsHeader("Last-Modified"));
@@ -218,7 +218,7 @@ public class HttpResponseTest {
 	@Test
 	public void testReasonPhrases() throws Exception {
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		rsp.setStatus(100);
 		Assert.assertEquals("Continue", rsp.getStatusMessage());
@@ -351,7 +351,7 @@ public class HttpResponseTest {
 	@Test
 	public void testStatus() throws Exception {
 
-		final HttpResponse rsp = new HttpResponse();
+		final BareHttpResponse rsp = new BareHttpResponse();
 
 		rsp.setStatus(200, "OK");
 
