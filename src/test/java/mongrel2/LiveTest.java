@@ -3,6 +3,7 @@ package mongrel2;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -154,6 +155,19 @@ public class LiveTest {
 
 	}
 
+	private static byte[] readFile(final File f) throws IOException {
+		final InputStream in = new FileInputStream(f);
+		try {
+			return readInputStream(in);
+		} finally {
+			in.close();
+		}
+	}
+
+	private static String readFileAsString(final File f) throws IOException {
+		return new String(readFile(f));
+	}
+
 	private static byte[] readInputStream(final InputStream in) throws IOException {
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -207,29 +221,34 @@ public class LiveTest {
 	}
 
 	private static void serverStop(final String m2sh, final File workdir) throws Exception {
+		final File pidFile = new File(workdir, "run" + File.separator + "mongrel2.pid");
+		final String pid = readFileAsString(pidFile);
 		if (server != null)
 			server.destroy();
-
 		server = null;
+		// old fashioned hardcoded kill
+		final String[] command = new String[] { "/bin/kill", "-9", pid };
+		Runtime.getRuntime().exec(command);
 	}
 
 	@Test
 	public void testMongrel2() throws Exception {
 
-		final HttpHandler handler = new HttpHandler(UUID.randomUUID().toString(), RECV_ADDR, SEND_ADDR);
-		handler.setRunning(true);
+		final Mongrel2Handler handler = new Mongrel2Handler(UUID.randomUUID().toString(), RECV_ADDR, SEND_ADDR);
+		handler.setActive(true);
 
 		final Runnable app = new Runnable() {
 			@Override
 			public void run() {
 
-				while (handler.isRunning()) {
+				while (handler.isActive()) {
 					try {
-						final HttpRequest req = handler.recv();
+						final HttpRequest req = new HttpRequest();
 						final HttpResponse rsp = new HttpResponse();
+						handler.takeRequest(req);
 						rsp.setContent("Hello, world!\n");
 						rsp.setStatus(HttpStatus.OK);
-						handler.send(rsp, req);
+						handler.sendResponse(rsp, req);
 					} catch (final IOException x) {
 						Assert.fail(x.toString());
 					}
@@ -244,7 +263,7 @@ public class LiveTest {
 		final HttpURLConnection http = (HttpURLConnection) u.openConnection();
 		Assert.assertEquals(200, http.getResponseCode());
 
-		handler.setRunning(false);
+		handler.setActive(false);
 
 	}
 
