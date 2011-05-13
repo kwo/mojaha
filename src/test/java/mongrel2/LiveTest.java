@@ -28,6 +28,7 @@ public class LiveTest {
 
 	private static final String CFG_FILE = "livetest.conf";
 	private static ExecutorService executor = null;
+	private static final int HTTP_PORT = 65432;
 	private static String m2sh = null;
 	private static final String RECV_ADDR = "tcp://127.0.0.1:22201";
 	private static final String SEND_ADDR = "tcp://127.0.0.1:22202";
@@ -259,7 +260,7 @@ public class LiveTest {
 
 		executor.submit(app);
 
-		final URL u = new URL("http://localhost:6767/");
+		final URL u = new URL("http://localhost:" + HTTP_PORT + "/");
 		final HttpURLConnection http = (HttpURLConnection) u.openConnection();
 		Assert.assertEquals(200, http.getResponseCode());
 
