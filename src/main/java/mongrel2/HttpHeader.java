@@ -13,35 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package mongrel2;
 
-import java.io.IOException;
-
 /**
- * Generic response to send to Mongrel2.
+ * Constants for common HTTP headers.
  * 
  * @author Karl Ostendorf
  * 
  */
-public class Response {
+public class HttpHeader {
 
-	protected byte[] payload = new byte[0];
+	public static final String CONTENT_LENGTH = "Content-Length";
+	public static final String CONTENT_TYPE = "Content-Type";
+	public static final String DATE = "Date";
+	public static final String ETAG = "ETag";
+	public static final String EXPIRES = "Expires";
+	public static final String LAST_MODIFIED = "Last-Modified";
 
-	public void setPayload(final byte[] payload) {
-		this.payload = payload;
-	}
-
-	protected byte[] getPayload() {
-		return this.payload;
-	}
-
-	/**
-	 * Called before a response is dispatched back to Mongrel2.
-	 */
-	protected void transform() throws IOException {
-		// default implementation does nothing
-		// setPayload(getPayload());
+	private HttpHeader() {
 	}
 
 }

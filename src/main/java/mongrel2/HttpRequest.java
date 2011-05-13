@@ -33,8 +33,6 @@ import java.util.TimeZone;
  */
 public class HttpRequest extends Request {
 
-	private static final String H_CONTENT_LENGTH = "Content-Length";
-	private static final String H_CONTENT_TYPE = "Content-Type";
 	private static final String H_METHOD = "METHOD";
 	private static final String H_PATH = "PATH";
 	private static final String H_PATTERN = "PATTERN";
@@ -68,7 +66,7 @@ public class HttpRequest extends Request {
 	 * @return Value of the Content-Length header
 	 */
 	public int getContentLength() {
-		return getIntHeader(H_CONTENT_LENGTH);
+		return getIntHeader(HttpHeader.CONTENT_LENGTH);
 	}
 
 	/**
@@ -77,7 +75,7 @@ public class HttpRequest extends Request {
 	 * @return Value of the Content-Type header
 	 */
 	public String getContentType() {
-		return getHeader(H_CONTENT_TYPE);
+		return getHeader(HttpHeader.CONTENT_TYPE);
 	}
 
 	public long getDateHeader(final String name) {
@@ -242,11 +240,11 @@ public class HttpRequest extends Request {
 	}
 
 	protected void setContentLength(final int size) {
-		setIntHeader(H_CONTENT_LENGTH, size);
+		setIntHeader(HttpHeader.CONTENT_LENGTH, size);
 	}
 
 	protected void setContentType(final String mimetype) {
-		setHeader(H_CONTENT_TYPE, mimetype);
+		setHeader(HttpHeader.CONTENT_TYPE, mimetype);
 	}
 
 	protected void setDateHeader(final String name, final long date) {

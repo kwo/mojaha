@@ -19,6 +19,7 @@ package mongrel2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.zeromq.ZMQ;
@@ -31,12 +32,12 @@ import org.zeromq.ZMQ;
  * @author Karl Ostendorf
  * 
  */
-public class HttpHandler {
+public class Mongrel2Handler {
 
 	private static final Charset ASCII = Charset.forName("US-ASCII");
 	private static final char SPACE_CHAR = ' ';
 
-	static String formatNetString(final HttpRequest[] requests) {
+	static String formatNetString(final Request[] requests) {
 		final String[] requestIds = new String[requests.length];
 		for (int i = 0; i < requests.length; i++)
 			requestIds[i] = requests[i].getRequestId();
@@ -61,12 +62,14 @@ public class HttpHandler {
 
 	}
 
-	private final ZMQ.Context context;
+	private final AtomicBoolean active;
+	private ZMQ.Context context = null;
 	private final String recvAddr;
-	private final ZMQ.Socket requests;
-	private final ZMQ.Socket responses;
-	private final AtomicBoolean running;
+	private ZMQ.Socket requests = null;
+	private ZMQ.Socket responses = null;
 	private final String sendAddr;
+
+	private final String senderId;
 
 	/**
 	 * Construct a new handler to communicate with Mongrel2.
@@ -80,34 +83,48 @@ public class HttpHandler {
 	 *            The socket on which the handler will publish messages. The
 	 *            same as the recv_spec in the mongrel2 handler configuration.
 	 */
-	public HttpHandler(final String senderId, final String recvAddr, final String sendAddr) {
-
-		this.running = new AtomicBoolean();
-
-		this.context = ZMQ.context(1);
-		this.requests = this.context.socket(ZMQ.PULL);
-		this.responses = this.context.socket(ZMQ.PUB);
-		this.responses.setIdentity(senderId.getBytes());
-
+	public Mongrel2Handler(final String senderId, final String recvAddr, final String sendAddr) {
+		this.senderId = senderId;
 		this.recvAddr = recvAddr;
 		this.sendAddr = sendAddr;
-
-	}
-
-	public boolean isRunning() {
-		return this.running.get();
+		this.active = new AtomicBoolean();
 	}
 
 	/**
-	 * Retrieves the next Request, blocking.
+	 * Returns if this handler is connected to Mongrel2.
+	 * 
+	 * @return true if connected, otherwise, false.
 	 */
-	public HttpRequest recv() {
-		final HttpRequest req = new HttpRequest();
-		req.parse(this.requests.recv(0));
-		return req;
+	public boolean isActive() {
+		return this.active.get();
 	}
 
-	public void send(final HttpResponse response, final HttpRequest... recipients) throws IOException {
+	/**
+	 * Send a response to one or more requests. Convenience method for the
+	 * sendResponse(Response, Request[]) method.
+	 * 
+	 * @param response
+	 *            the response to send
+	 * @param recipients
+	 *            one or more requests to receive the response.
+	 * @throws IOException
+	 */
+	public void sendResponse(final Response response, final Collection<Request> recipients) throws IOException {
+		final Request[] r = new Request[recipients.size()];
+		recipients.toArray(r);
+		sendResponse(response, r);
+	}
+
+	/**
+	 * Send a response to one or more requests.
+	 * 
+	 * @param response
+	 *            the response to send
+	 * @param recipients
+	 *            one or more requests to receive the response.
+	 * @throws IOException
+	 */
+	public void sendResponse(final Response response, final Request... recipients) throws IOException {
 
 		if (recipients == null || recipients.length == 0)
 			throw new IllegalArgumentException();
@@ -124,6 +141,7 @@ public class HttpHandler {
 		responseStr.append(SPACE_CHAR);
 
 		response.transform();
+
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(responseStr.toString().getBytes(ASCII));
 		out.write(response.getPayload());
@@ -134,30 +152,55 @@ public class HttpHandler {
 
 	}
 
-	public void setRunning(final boolean running) {
+	/**
+	 * Sets this handler active or inactive. When switching from inactive to
+	 * active the necessary ZeroMQ connections will be opened to receive
+	 * requests and be able to send responses to Mongrel2. When switching from
+	 * active to inactive, all connections and resources are closed.
+	 * 
+	 * @param active
+	 *            true to activate, otherwise, false
+	 */
+	public void setActive(final boolean active) {
 
-		final boolean wasRunning = this.running.getAndSet(running);
+		final boolean wasActive = this.active.getAndSet(active);
 
-		if (running && !wasRunning) {
+		if (active && !wasActive) {
 
-			// start up
+			// initialize
+			this.context = ZMQ.context(1);
+			this.requests = this.context.socket(ZMQ.PULL);
+			this.requests.setLinger(0);
+			this.responses = this.context.socket(ZMQ.PUB);
+			this.responses.setIdentity(this.senderId.getBytes());
+			this.responses.setLinger(0);
 			this.requests.connect(this.recvAddr);
 			this.responses.connect(this.sendAddr);
 
-		} else if (!running && wasRunning) {
+		} else if (!active && wasActive) {
+
 			// shutdown
-			try {
-				this.requests.close();
-			} catch (final Exception x) {
-				// ignore
-			}
-			try {
-				this.responses.close();
-			} catch (final Exception x) {
-				// ignore
-			}
+			this.requests.close();
+			this.requests = null;
+			this.responses.close();
+			this.responses = null;
+			// Terminating the context causes apps to hang sometimes.
+			// Not terminating explicitly will cause the context to terminate
+			// when the object is garbage collected.
+			// this.context.term();
+			this.context = null;
+
 		}
 
+	}
+
+	/**
+	 * Returns the next request from Mongrel2, blocking until one arrives.
+	 * 
+	 * @return next HTTP request
+	 */
+	public void takeRequest(final Request req) {
+		req.parse(this.requests.recv(0));
 	}
 
 }

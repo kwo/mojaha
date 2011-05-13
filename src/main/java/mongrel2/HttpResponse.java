@@ -1,335 +1,73 @@
-/*
- * Copyright (C) 2011 Karl Ostendorf
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package mongrel2;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
- * HTTP response object used to return responses to the Mongrel2 web server;
- * slightly modelled after HttpServletResponse of the Servlet API.
+ * Response implementation that adds common http headers during the
+ * transformation.
  * 
  * @author Karl Ostendorf
  * 
  */
-public class HttpResponse extends Response {
+public class HttpResponse extends BareHttpResponse {
 
-	private static final String DEFAULT_REASON_PHRASE = "Undefined";
-	private static final String H_CONTENT_LENGTH = "Content-Length";
-	private static final String H_CONTENT_TYPE = "Content-Type";
-	private static final String H_DATE = "Date";
-	private static final String H_EXPIRES = "Expires";
-	private static final String H_LAST_MODIFIED = "Last-Modified";
+	private static final String DEFAULT_CONTENT_TYPE = "text/plain";
+	private static final String DEFAULT_TEXT_CHARSET = "utf-8";
+	private static final String ETAG_DIGEST_ALGORITHM = "MD5";
 
-	private byte[] content = new byte[0];
-	private final SimpleDateFormat df;
-	private final Map<String, String[]> headers;
-	private int statusCode = 0;
-	private String statusMessage = null;
-
-	public HttpResponse() {
-		this.headers = new HashMap<String, String[]>();
-		this.df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-		this.df.setTimeZone(TimeZone.getTimeZone("GMT"));
-	}
-
-	public void addDateHeader(final String name, final long value) {
-		addHeader(name, this.df.format(value));
-	}
-
-	public void addHeader(final String name, final String value) {
-		if (!containsHeader(name)) {
-			setHeader(name, value);
-		} else {
-			final String[] values = getHeaderValues(name);
-			final String[] newValues = new String[values.length + 1];
-			for (int i = 0; i < values.length; i++)
-				newValues[i] = values[i];
-			newValues[newValues.length - 1] = value;
-			this.headers.put(name, newValues);
-		}
-	}
-
-	public void addIntHeader(final String name, final int value) {
-		addHeader(name, Integer.toString(value));
-	}
-
-	/**
-	 * Send a simple plain text response back to the requester, using the http
-	 * reason phrase as the body contents.
-	 * 
-	 * @param status
-	 */
-	public void sendError(final HttpStatus status) {
-
-		setContent(status.msg + "\n");
-		setHeader("Cache-Control", "no-cache");
-		setDateHeader(H_LAST_MODIFIED, System.currentTimeMillis());
-
-	}
-
-	public void setContent(final byte[] content) {
-		this.content = content;
-	}
-
-	/**
-	 * Set the content as a string. The string will be encoded as UTF8 and the
-	 * content-type will also be set to "text/plain; charset=utf-8".
-	 * 
-	 * @param content
-	 */
-	public void setContent(final String content) {
+	private static String digest(final String algorithm, final byte[] input) {
 		try {
-			setContent(content.getBytes("UTF-8"));
-			setContentType("text/plain; charset=utf-8");
-		} catch (final UnsupportedEncodingException x) {
-			throw new InternalError("JVM does not support UTF8 encoding.");
+			final MessageDigest digest = MessageDigest.getInstance(algorithm);
+			return toHexString(digest.digest(input));
+		} catch (final NoSuchAlgorithmException x) {
+			throw new InternalError("JVM does not support algorithm: " + algorithm);
 		}
 	}
 
-	public void setContentLength(final int size) {
-		setIntHeader(H_CONTENT_LENGTH, size);
-	}
-
-	public void setContentType(final String mimetype) {
-		setHeader(H_CONTENT_TYPE, mimetype);
-	}
-
-	public void setDateHeader(final String name, final long date) {
-		setHeader(name, this.df.format(date));
-	}
-
-	public void setExpires(final int value, final TimeUnit unit) {
-		setExpires(value, unit, System.currentTimeMillis());
-	}
-
-	public void setExpires(final int value, final TimeUnit unit, final long startTime) {
-
-		long time = startTime;
-
-		switch (unit) {
-
-		case SECONDS:
-			time += (value * 1000);
-			break;
-
-		case MINUTES:
-			time += (value * 1000 * 60);
-			break;
-
-		case HOURS:
-			time += (value * 1000 * 60 * 60);
-			break;
-
-		case DAYS:
-			time += (value * 1000 * 60 * 60 * 24);
-			break;
-
-		default:
-			throw new IllegalArgumentException("Only days, hours, minutes and seconds supported.");
-
+	private static String toHexString(final byte[] bytes) {
+		final char[] hexArray = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+		final char[] hexChars = new char[bytes.length * 2];
+		for (int i = 0; i < bytes.length; i++) {
+			final int n = bytes[i] & 0xFF;
+			hexChars[i * 2] = hexArray[n / 16];
+			hexChars[i * 2 + 1] = hexArray[n % 16];
 		}
-
-		setExpires(time);
-
+		return new String(hexChars);
 	}
 
-	public void setExpires(final long date) {
-		setDateHeader(H_EXPIRES, date);
-	}
+	@Override
+	protected void transform() throws IOException {
 
-	public void setHeader(final String name, final String value) {
-		this.headers.put(name, new String[] { value });
-	}
+		// add DATE header if not already set
+		if (!containsHeader(HttpHeader.DATE))
+			setTimestampHeader();
 
-	public void setIntHeader(final String name, final int value) {
-		setHeader(name, Integer.toString(value));
-	}
-
-	public void setLastModified(final long date) {
-		setDateHeader(H_LAST_MODIFIED, date);
-	}
-
-	/**
-	 * Convenience method that calls {@link #setStatus(int, String)}.
-	 * 
-	 * @param status
-	 */
-	public void setStatus(final HttpStatus status) {
-		setStatus(status.code, status.msg);
-	}
-
-	/**
-	 * Convenience method that calls {@link #setStatus(int, String)}. The reason
-	 * phrase will be set automatically for know HTTP status codes.
-	 * 
-	 * 
-	 * @param statusCode
-	 */
-	public void setStatus(final int statusCode) {
-		final HttpStatus status = HttpStatus.findByCode(statusCode);
-		if (status == null) {
-			setStatus(statusCode, DEFAULT_REASON_PHRASE);
-		} else {
-			setStatus(statusCode, status.msg);
-		}
-	}
-
-	/**
-	 * Set the HTTP Status Code and corresponding resaon phrase.
-	 * 
-	 * @param sc
-	 * @param sm
-	 */
-	public void setStatus(final int sc, final String sm) {
-		this.statusCode = sc;
-		this.statusMessage = sm;
-	}
-
-	/**
-	 * Transform the headers, contents, etc of this HttpResponse and write them
-	 * to the payload of the superclass in preparation for sending to mongrel2.
-	 * The payload will be reset if this method is called multiple times.
-	 * 
-	 * @throws IOException
-	 */
-	public void transform() throws IOException {
-
-		final String LINE_TERMINATOR = "\r\n";
-		final char SPACE_CHAR = ' ';
-
-		final StringBuilder responseStr = new StringBuilder();
-
-		// body
-		responseStr.append("HTTP/1.1 ");
-		responseStr.append(getStatus());
-		responseStr.append(SPACE_CHAR);
-		responseStr.append(getStatusMessage());
-		responseStr.append(LINE_TERMINATOR);
+		// if content is null, set it to zero-length byte array
+		if (getContent() == null)
+			setContent(new byte[0]);
 
 		// set content-length header
-		setIntHeader(H_CONTENT_LENGTH, getContent().length);
+		setIntHeader(HttpHeader.CONTENT_LENGTH, getContent().length);
 
-		// get header names, sort list alphabetically
-		final List<String> headerNames = new ArrayList<String>();
-		for (final String headerName : getHeaderNames()) {
-			headerNames.add(headerName);
-		}
-		Collections.sort(headerNames);
+		// add the default content type, if missing
+		if (!containsHeader(HttpHeader.CONTENT_TYPE))
+			setContentType(DEFAULT_CONTENT_TYPE);
 
-		// add date header
-		setTimestampHeader();
-		// add date header name to front of header name list
-		headerNames.add(0, H_DATE);
+		// if content type is text/* and no charset, assign default charset
+		if (getContentType().startsWith("text/") && getContentType().indexOf("charset") == -1)
+			setContentType(getContentType() + "; charset=" + DEFAULT_TEXT_CHARSET);
 
-		// headers
-		for (final String name : headerNames) {
-			for (final String value : getHeaderValues(name)) {
-				responseStr.append(name);
-				responseStr.append(": ");
-				responseStr.append(value);
-				responseStr.append(LINE_TERMINATOR);
-			}
+		// add etag
+		if (!containsHeader(HttpHeader.ETAG)) {
+			final StringBuilder value = new StringBuilder("\"\"");
+			value.insert(1, digest(ETAG_DIGEST_ALGORITHM, getContent()));
+			setHeader(HttpHeader.ETAG, value.toString());
 		}
 
-		responseStr.append(LINE_TERMINATOR);
+		super.transform();
 
-		final ByteArrayOutputStream out = new ByteArrayOutputStream();
-		out.write(responseStr.toString().getBytes("US-ASCII"));
-		if (getContent().length > 0) {
-			out.write(getContent());
-		}
-		out.close();
-
-		setPayload(out.toByteArray());
-
-	}
-
-	protected boolean containsHeader(final String name) {
-		return this.headers.containsKey(name);
-	}
-
-	protected byte[] getContent() {
-		return this.content;
-	}
-
-	protected int getContentLength() {
-		return getIntHeader(H_CONTENT_LENGTH);
-	}
-
-	protected String getContentType() {
-		return getHeader(H_CONTENT_TYPE);
-	}
-
-	protected long getDateHeader(final String name) {
-		if (!containsHeader(name))
-			return -1;
-		try {
-			return this.df.parse(getHeader(name)).getTime();
-		} catch (final ParseException x) {
-			throw new RuntimeException(x);
-		}
-	}
-
-	protected String getHeader(final String name) {
-		final String key = name;
-		if (containsHeader(key))
-			return getHeaderValues(key)[0];
-		return null;
-	}
-
-	protected Iterable<String> getHeaderNames() {
-		return this.headers.keySet();
-	}
-
-	protected String[] getHeaderValues(final String name) {
-		return this.headers.get(name);
-	}
-
-	protected int getIntHeader(final String name) {
-		if (!containsHeader(name))
-			return -1;
-		return Integer.parseInt(getHeader(name));
-	}
-
-	protected int getStatus() {
-		return this.statusCode;
-	}
-
-	protected String getStatusMessage() {
-		return this.statusMessage;
-	}
-
-	protected void setTimestampHeader() {
-		setTimestampHeader(System.currentTimeMillis());
-	}
-
-	protected void setTimestampHeader(final long time) {
-		setDateHeader(H_DATE, time);
 	}
 
 }
