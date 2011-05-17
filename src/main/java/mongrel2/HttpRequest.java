@@ -31,7 +31,7 @@ import java.util.TimeZone;
  * @author Karl Ostendorf
  * 
  */
-public class HttpRequest extends Request {
+public class HttpRequest extends BaseHttpRequest {
 
 	private static final String H_METHOD = "METHOD";
 	private static final String H_PATH = "PATH";

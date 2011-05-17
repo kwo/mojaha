@@ -43,6 +43,7 @@
 		<maven-shade-plugin.version>1.4</maven-shade-plugin.version>
 		<maven-source-plugin.version>2.1.2</maven-source-plugin.version>
 
+		<commons-codec.version>1.5</commons-codec.version>
 		<json.version>20090211</json.version>
 		<junit.version>4.8.2</junit.version>
 		<jzmq.version>2.1.0-SNAPSHOT</jzmq.version>
@@ -68,6 +69,13 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>${commons-codec.version}</version>
+			<type>jar</type>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

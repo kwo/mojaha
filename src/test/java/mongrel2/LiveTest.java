@@ -1,241 +1,55 @@
 package mongrel2;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import junit.framework.Assert;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.apache.commons.codec.binary.Base64;
 
 public class LiveTest {
 
-	private static final String CFG_FILE = "livetest.conf";
-	private static ExecutorService executor = null;
-	private static final int HTTP_PORT = 65432;
-	private static String m2sh = null;
-	private static final String RECV_ADDR = "tcp://127.0.0.1:22201";
-	private static final String SEND_ADDR = "tcp://127.0.0.1:22202";
-	private static Process server = null;
-	private static File workdir = null;
+	private static final String HTTP_RECV = "tcp://127.0.0.1:22201";
+	private static final String HTTP_SEND = "tcp://127.0.0.1:44401";
+	private static final String JSON_RECV = "tcp://127.0.0.1:22202";
+	private static final String JSON_SEND = "tcp://127.0.0.1:44402";
+	private static final InetSocketAddress SERVER_ADDR = new InetSocketAddress("localhost", 65432);
+	private static final String XML_RECV = "tcp://127.0.0.1:22203";
 
-	@BeforeClass
-	public static void setup() throws Exception {
+	private static final String XML_SEND = "tcp://127.0.0.1:44403";
 
-		// find m2sh
-		m2sh = findM2sh();
-		Assert.assertNotNull(m2sh);
-
-		// create workdir
-		workdir = createWorkingDirectory();
-		Assert.assertTrue(workdir.exists());
-		Assert.assertTrue(workdir.isDirectory());
-
-		executor = Executors.newCachedThreadPool();
-
-		// shell to m2sh, load configuration
-		loadConfiguration(m2sh, workdir);
-		final File cfg = new File(workdir, "config.sqlite");
-		Assert.assertTrue(cfg.exists());
-		Assert.assertTrue("zero-length db", cfg.length() > 0);
-
-		serverStart(m2sh, workdir);
-
-	}
-
-	@AfterClass
-	public static void teardown() throws Exception {
-
-		serverStop(m2sh, workdir);
-
-		if (executor != null)
-			executor.shutdownNow();
-		executor = null;
-
-		// remove workdir
-		removeWorkingDirectory(workdir);
-		Assert.assertTrue(!workdir.exists());
-
-	}
-
-	private static File createWorkingDirectory() throws Exception {
-
-		final String wd = "mongrel2-" + UUID.randomUUID().toString();
-		final File tmp1 = File.createTempFile("tmp", null);
-		tmp1.delete();
-
-		final File workdir = new File(tmp1.getParentFile(), wd);
-		final File rundir = new File(workdir, "run");
-		final File tmpdir = new File(workdir, "tmp");
-		final File logdir = new File(workdir, "logs");
-
-		workdir.mkdir();
-		rundir.mkdir();
-		tmpdir.mkdir();
-		logdir.mkdir();
-
-		return workdir;
-
-	}
-
-	private static void extractConfiguration(final File target) throws IOException {
-		final OutputStream out = new FileOutputStream(target);
-		out.write(readInputStream(LiveTest.class.getResourceAsStream(CFG_FILE)));
-		out.close();
-	}
-
-	private static String findM2sh() throws Exception {
-
-		String m2sh = null;
-
-		// build directories for search
-		final List<String> pathdirs = new ArrayList<String>();
-
-		// add search path to directories
-		final String path = System.getenv("PATH");
-		if (path != null)
-			for (final String pathdir : path.split(File.pathSeparator))
-				pathdirs.add(pathdir);
-
-		// add other common locations
-		pathdirs.add("/usr/local/bin");
-
-		// start looking
-		for (final String pathdir : pathdirs) {
-			final File f = new File(pathdir + File.separator + "m2sh");
-			if (f.exists()) {
-				m2sh = f.getPath();
-				break;
-			}
-		}
-
-		return m2sh;
-
-	}
-
-	private static void loadConfiguration(final String m2sh, final File workdir) throws Exception {
-
-		final File livetest = new File(workdir, CFG_FILE);
-		extractConfiguration(livetest);
-		final Process p = Runtime.getRuntime().exec(
-				new String[] { m2sh, "load", "--db", "config.sqlite", "--config", CFG_FILE }, new String[0], workdir);
-
-		final Future<?> stderr = executor.submit(new StreamMonitor(p.getErrorStream()));
-		final Future<?> stdout = executor.submit(new StreamMonitor(p.getInputStream()));
-
-		while (true) {
-			try {
-				Thread.sleep(500);
-				p.exitValue();
-				break;
-			} catch (final IllegalThreadStateException x) {
-				// wait
-			}
-		}
-
-		stderr.cancel(true);
-		stdout.cancel(true);
-
-		Assert.assertEquals(0, p.exitValue());
-
-	}
-
-	private static byte[] readFile(final File f) throws IOException {
-		final InputStream in = new FileInputStream(f);
-		try {
-			return readInputStream(in);
-		} finally {
-			in.close();
-		}
-	}
-
-	private static String readFileAsString(final File f) throws IOException {
-		return new String(readFile(f));
-	}
-
-	private static byte[] readInputStream(final InputStream in) throws IOException {
+	private static byte[] readInputStream(final InputStream in, final boolean keepopen) throws IOException {
 
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 		int len = 0;
 		final byte[] buf = new byte[256];
-		while ((len = in.read(buf)) > -1)
+		while ((in.available() > 0) && (len = in.read(buf)) > -1)
 			out.write(buf, 0, len);
 		out.close();
-		in.close();
+		if (!keepopen)
+			in.close();
 
 		return out.toByteArray();
 
 	}
 
-	private static void removeDirectory(final File target) {
-		final File[] ff = target.listFiles();
-		for (final File f : ff) {
-			if (f.isDirectory()) {
-				removeDirectory(f);
-			} else {
-				f.delete();
-			}
-		}
-		target.delete();
-	}
+	public void testHttpHandler() throws Exception {
 
-	private static void removeWorkingDirectory(final File dir) {
-		removeDirectory(dir);
-	}
+		final ExecutorService executor = Executors.newCachedThreadPool();
 
-	private static void serverStart(final String m2sh, final File workdir) throws Exception {
-
-		server = Runtime.getRuntime().exec(new String[] { m2sh, "start", "--name", "test" }, new String[0], workdir);
-		Assert.assertNotNull(server);
-
-		executor.execute(new StreamMonitor(server.getErrorStream()));
-		executor.execute(new StreamMonitor(server.getInputStream()));
-
-		// System.out.printf("Server running in: %s%n", workdir.getPath());
-
-		Thread.sleep(500);
-
-		final File pidFile = new File(workdir, "run" + File.separator + "mongrel2.pid");
-		Assert.assertNotNull(pidFile);
-		Assert.assertTrue("pid file does not exist", pidFile.exists());
-
-		// final String pid = new String(readFile(pidFile));
-		// System.out.printf("Server running with pid: %s%n", pid);
-
-	}
-
-	private static void serverStop(final String m2sh, final File workdir) throws Exception {
-		final File pidFile = new File(workdir, "run" + File.separator + "mongrel2.pid");
-		final String pid = readFileAsString(pidFile);
-		if (server != null)
-			server.destroy();
-		server = null;
-		// old fashioned hardcoded kill
-		final String[] command = new String[] { "/bin/kill", "-9", pid };
-		Runtime.getRuntime().exec(command);
-	}
-
-	@Test
-	public void testMongrel2() throws Exception {
-
-		final Mongrel2Handler handler = new Mongrel2Handler(UUID.randomUUID().toString(), RECV_ADDR, SEND_ADDR);
+		final Mongrel2Handler handler = new Mongrel2Handler(UUID.randomUUID().toString(), HTTP_RECV, HTTP_SEND);
+		// handler.setLevel(Level.DEBUG);
 		handler.setActive(true);
 
 		final Runnable app = new Runnable() {
@@ -260,43 +74,113 @@ public class LiveTest {
 
 		executor.submit(app);
 
-		final URL u = new URL("http://localhost:" + HTTP_PORT + "/");
+		final URL u = new URL("http://" + SERVER_ADDR.getHostName() + ":" + SERVER_ADDR.getPort() + "/");
 		final HttpURLConnection http = (HttpURLConnection) u.openConnection();
 		Assert.assertEquals(200, http.getResponseCode());
 
-		handler.setActive(false);
+		// handler.setActive(false);
+		executor.shutdownNow();
 
 	}
 
-}
+	public void testJsonHandler() throws Exception {
 
-class StreamMonitor implements Runnable {
+		final byte[] contents = "{'msg': 'greetings mychat'}".getBytes();
 
-	private final BufferedReader in;
+		final Mongrel2Handler handler = new Mongrel2Handler(UUID.randomUUID().toString(), JSON_RECV, JSON_SEND);
+		// handler.setLevel(Level.DEBUG);
+		handler.setActive(true);
 
-	StreamMonitor(final InputStream in) {
-		this.in = new BufferedReader(new InputStreamReader(in));
+		final Socket s = new Socket(SERVER_ADDR.getAddress(), SERVER_ADDR.getPort());
+		final InputStream in = s.getInputStream();
+		final OutputStream out = s.getOutputStream();
+
+		// send message
+		out.write("@mychat ".getBytes());
+		out.write(contents);
+		out.write(0);
+		out.flush();
+
+		// wait to receive message at handler
+		final Request req = new Request();
+		handler.takeRequest(req);
+
+		// verify correctness
+		Assert.assertEquals("server content length unequal", contents.length, req.getContent().length);
+		Assert.assertTrue("server contents do not match", Arrays.equals(contents, req.getContent()));
+
+		// echo message back to client
+		final Response rsp = new Response();
+		rsp.setPayload(contents);
+		Assert.assertTrue(Arrays.equals(contents, rsp.getPayload()));
+		handler.sendResponse(rsp, req);
+
+		// read out message at client
+		final byte[] msg1 = readInputStream(in, true);
+		Assert.assertTrue("zero-length message", msg1.length > 0);
+		// decode base64 message
+		final byte[] msg = Base64.decodeBase64(msg1);
+
+		// verify correctness
+		Assert.assertEquals("client content length unequal", contents.length, msg.length);
+		Assert.assertTrue("client contents do not match", Arrays.equals(contents, msg));
+
+		out.close();
+		in.close();
+		s.close();
+
+		// handler.setActive(false);
+
 	}
 
-	@Override
-	public void run() {
+	public void testXmlHandler() throws Exception {
 
-		try {
-			String line = null;
-			while ((line = this.in.readLine()) != null) {
-				if (line.startsWith("[ERROR]"))
-					System.out.println(line);
-			}
-		} catch (final IOException x) {
-			// ignore
-		} finally {
-			try {
-				if (this.in != null)
-					this.in.close();
-			} catch (final IOException x) {
-				// ignore
-			}
-		}
+		final byte[] contents = "<myxml><msg>hello xml</msg></myxml>".getBytes();
+
+		final Mongrel2Handler handler = new Mongrel2Handler(UUID.randomUUID().toString(), XML_RECV, XML_SEND);
+		// handler.setLevel(Level.DEBUG);
+		handler.setActive(true);
+
+		final Socket s = new Socket(SERVER_ADDR.getAddress(), SERVER_ADDR.getPort());
+		final InputStream in = s.getInputStream();
+		final OutputStream out = s.getOutputStream();
+
+		// send message
+		// out.write("<myxml>".getBytes());
+		out.write(contents);
+		out.write(0);
+		out.flush();
+
+		// wait to receive message at handler
+		final Request req = new Request();
+		handler.takeRequest(req);
+
+		// verify correctness
+		Assert.assertEquals("server content length unequal", contents.length, req.getContent().length);
+		Assert.assertTrue("server contents do not match", Arrays.equals(contents, req.getContent()));
+
+		// echo message back to client
+		final Response rsp = new Response();
+		rsp.setPayload(contents);
+		Assert.assertTrue(Arrays.equals(contents, rsp.getPayload()));
+		handler.sendResponse(rsp, req);
+		// handler.sendResponse(rsp, req);
+
+		// read out message at client
+		final byte[] msg1 = readInputStream(in, true);
+		Assert.assertTrue("zero-length message", msg1.length > 0);
+		// decode base64 message
+		final byte[] msg = Base64.decodeBase64(msg1);
+
+		// verify correctness
+		Assert.assertEquals("client content length unequal", contents.length, msg.length);
+		Assert.assertTrue("client contents do not match", Arrays.equals(contents, msg));
+
+		out.close();
+		in.close();
+		s.close();
+
+		// handler.setActive(false);
 
 	}
 
