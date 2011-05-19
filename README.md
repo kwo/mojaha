@@ -50,3 +50,6 @@ When running your application with mojaha, the jzmq native library will need to 
 
                 java -Djava.library.path=/path/to/jzmqlib -cp YourApp.jar:mojaha.jar your.App
 
+## Related Projects
+ - [Java Mongrel2 Handler](https://github.com/asinger/mongrel2j)
+
