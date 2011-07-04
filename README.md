@@ -33,10 +33,15 @@ while (handler.isActive()) {
 
 ## Building and Installing
 
-First, download and build jzmq according to the project [readme](https://github.com/zeromq/jzmq#readme).
 As an additional step, not in the readme, install the JAR into your local maven repository as follows:
+First, download jzmq and build it as follows:
 
-				mvn install -Dmaven.test.skip=true
+		./autogen.sh
+		./configure
+		make
+		mvn clean install
+
+If you run into trouble, check the jzmq project [readme](https://github.com/zeromq/jzmq#readme).
 				
 Now, build the mojaha JAR as follows:
 
@@ -46,7 +51,7 @@ Now, build the mojaha JAR as follows:
 A JAR file will be generated in the mojaha/target directory named mojaha-VERSION.jar.
 
 ## Running
-When running your application with mojaha, the jzmq native library will need to be referenced in the java.library.path
+Run your application with mojaha as follows:
 
-                java -Djava.library.path=/path/to/jzmqlib -cp YourApp.jar:mojaha.jar your.App
+                java -cp YourApp.jar:mojaha-VERSION.jar your.App
 
