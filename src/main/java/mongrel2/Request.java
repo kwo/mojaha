@@ -126,12 +126,12 @@ public class Request {
 		// Mongrel2 sends requests formatted as follows:
 		// UUID ID PATH SIZE:HEADERS,SIZE:BODY,
 
-		// try {
-		// System.out.write(raw);
-		// System.out.println();
-		// } catch (final Exception x) {
-		// // ignore
-		// }
+		try {
+			System.out.write(raw);
+			System.out.println();
+		} catch (final Exception x) {
+			// ignore
+		}
 
 		int p0 = -1;
 		int p1 = -1;

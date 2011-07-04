@@ -1,8 +1,13 @@
-package mongrel2;
+package mongrel2.examples;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import mongrel2.HttpRequest;
+import mongrel2.HttpResponse;
+import mongrel2.HttpStatus;
+import mongrel2.Mongrel2Handler;
 
 public class TestApp implements Runnable {
 

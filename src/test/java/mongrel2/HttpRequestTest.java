@@ -113,7 +113,7 @@ public class HttpRequestTest {
 	@Test
 	public void testParse() throws Exception {
 
-		final byte[] mongrel2RequestMessage = getResourceAsByteArray("/test-request.txt");
+		final byte[] mongrel2RequestMessage = getResourceAsByteArray("test-request.txt");
 		final HttpRequest req = new HttpRequest();
 		req.parse(mongrel2RequestMessage);
 

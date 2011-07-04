@@ -28,12 +28,12 @@ public class Response {
 
 	protected byte[] payload = new byte[0];
 
-	public void setPayload(final byte[] payload) {
-		this.payload = payload;
+	public byte[] getPayload() {
+		return this.payload;
 	}
 
-	protected byte[] getPayload() {
-		return this.payload;
+	public void setPayload(final byte[] payload) {
+		this.payload = payload;
 	}
 
 	/**

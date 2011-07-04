@@ -66,6 +66,9 @@ public class HttpResponse extends BareHttpResponse {
 			setHeader(HttpHeader.ETAG, value.toString());
 		}
 
+		// add keep alive
+		setHeader("Connection", "keep-alive");
+
 		super.transform();
 
 	}
