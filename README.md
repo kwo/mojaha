@@ -28,32 +28,30 @@ while (handler.isActive()) {
  - Maven 2 +
  - [jzmq](https://github.com/zeromq/jzmq): the Java bindings for [ZeroMQ](http://www.zeromq.org/).
    As jzmq is not in the maven repositories, it will need to be built and installed locally before compiling mojaha.
-   Additionally, jzmq includes a native library which must also be built and installed locally as well as referenced
-   in the java.library.path at runtime.
 
 ## Building and Installing
 
-As an additional step, not in the readme, install the JAR into your local maven repository as follows:
 First, download jzmq and build it as follows:
 
-		./autogen.sh
-		./configure
-		make
-		mvn clean install
+	cd jzmq
+	./autogen.sh
+	./configure
+	make
+	mvn clean install
 
 If you run into trouble, check the jzmq project [readme](https://github.com/zeromq/jzmq#readme).
 				
 Now, build the mojaha JAR as follows:
 
-                cd mojaha
-                mvn clean install
+	cd mojaha
+	mvn clean install
 
 A JAR file will be generated in the mojaha/target directory named mojaha-VERSION.jar.
 
 ## Running
 Run your application with mojaha as follows:
 
-                java -cp YourApp.jar:mojaha-VERSION.jar your.App
+	java -cp YourApp.jar:mojaha-VERSION.jar your.App
 
 ## Related Projects
  - [Java Mongrel2 Handler](https://github.com/asinger/mongrel2j)
